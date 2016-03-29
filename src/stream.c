@@ -919,6 +919,8 @@ int StreamPollPackets( TcpStream* stream, int* new_ack )
 		DEBUG_TRACE1("\n %s - deadlock detected, processing the front of the queue", StreamToString(stream) );
 #endif
 		rc = StreamConsumeHead(stream, new_ack );
+		/* force processing of other half of the TCP stream as well */
+		if( rc == DSSL_RC_OK ) *new_ack = 1;
 	}
 
 	return rc;
