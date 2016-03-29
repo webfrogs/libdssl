@@ -732,8 +732,15 @@ int StreamHasMissingPacket(TcpStream* stream, DSSL_Pkt* pkt)
 	TcpSession* s = stream->session;
 	_ASSERT(s);
 
-	if(s->type != eSessionTypeTcp || s->missing_callback == NULL ) return 0;
-	if( stream->pktHead == NULL ) return 0;
+	if( s->type != eSessionTypeTcp && s->type != eSessionTypeTBD) return 0;
+	if( s->missing_callback == NULL ) return 0;
+	if( stream->pktHead == NULL ) {
+		if( s->type == eSessionTypeTBD &&
+			( (stream->flags & DSSL_TCPSTREAM_SENT_SYN) ) &&
+			IsPacketTimeout(stream, pkt, &stream->syn_time) )
+			return 1;
+		return 0;
+	}
 	if( IsPacketTimeout(stream, pkt, &stream->pktHead->pcap_header.ts) )
 		return 1;
 	if( PKT_TCP_SEQ(stream->pktHead) == stream->nextSeqExpected) return 0;
