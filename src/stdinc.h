@@ -35,18 +35,7 @@
   #endif
   #define DSSL_STRDUP(x) _strdup(x)
 
-#elif defined (__linux)
-  #include <stdlib.h>
-  #ifdef _DEBUG
-    #include <assert.h>
-    #define FALSE 0
-    #define _ASSERT( exp ) assert( exp )
-  #else
-    #define _ASSERT( exp ) ((void)0)
-  #endif
-  #define DSSL_STRDUP(x) strdup(x)
-
-#elif defined (__FreeBSD__) || defined(__APPLE__)
+#else
   #include <stdlib.h>
   #ifdef _DEBUG
     #include <assert.h>

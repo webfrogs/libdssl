@@ -32,44 +32,68 @@
   #include <features.h>
   #define __FAVOR_BSD
   #include <netinet/ether.h>
-  #include <netinet/ip.h>
-  #include <netinet/tcp.h>
-  #include <netinet/udp.h>
-  #define ETHER_HDRLEN  14
-  #define TH_ECNECHO    0x40  /* ECN Echo */
-  #define TH_CWR        0x80  /* ECN Cwnd Reduced */
 
 #elif defined(__FreeBSD__) || defined(__APPLE__)
   #include <netinet/in_systm.h>
   #include <netinet/in.h>
   #include <net/ethernet.h>
-  #include <netinet/ip.h>
-  #include <netinet/tcp.h>
-  #include <netinet/udp.h>
-  #define ETHER_HDRLEN  14
-  #define TH_ECNECHO    0x40    /* ECN Echo */
-  #define TH_CWR        0x80    /* ECN Cwnd Reduced */
+
+#elif defined(__SunOS_5_10)
+  #include <strings.h>		/* the ip_compat.h conflics bcopy->memmove */
+  #include <netinet/ip_compat.h>
+  #include <netinet/if_ether.h>
+
+#elif defined(__SunOS_5_8) || defined(__SunOS_5_9) || ( defined(__GNUC__) && defined(__sun__) )
+  #include <sys/socket.h>
+  #include <sys/ethernet.h>
+  #include <netinet/in_systm.h>
+
+#elif defined(_AIX)
+  #include <netinet/if_ether.h>
+
+#elif defined(__hpux)
+  #include <netinet/in_systm.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <net/if_arp.h>
+  #include <netinet/if_ether.h>
 
 #else
   #include <netinet/ether.h>
+
+#endif
+
+#if !defined( _WIN32)
   #include <netinet/ip.h>
   #include <netinet/tcp.h>
   #include <netinet/udp.h>
+  #ifndef ETHER_HDRLEN
+    #define ETHER_HDRLEN  14
+  #endif
+  #ifndef TH_ECNECHO
+    #define TH_ECNECHO    0x40  /* ECN Echo */
+  #endif
+  #ifndef TH_CWR
+    #define TH_CWR        0x80  /* ECN Cwnd Reduced */
+  #endif
 #endif
 
 #define MAKE_IP( b1, b2, b3, b4 ) ((uint32_t)(b1 | ((uint32_t)b2 << 8) | ((uint32_t)b3 << 16) | ((uint32_t)b4 << 24 )))
 
-#if defined (__linux)
-  #define INADDR_IP( _inaddr ) ((_inaddr).s_addr)
-  #define NM_TCP_HDR_LEN( hdr ) (((u_char)(hdr)->th_off ) << 2 )
-  #define IP_V(ip ) ((ip)->ip_v)
-  #define IP_HL(ip) ((ip)->ip_hl)
-#elif defined(__FreeBSD__) || defined(__APPLE__)
-  #define INADDR_IP( _inaddr ) ((_inaddr).s_addr)
-  #define NM_TCP_HDR_LEN( hdr ) (((u_char)(hdr)->th_off ) << 2 )
-  #define IP_V(ip ) ((ip)->ip_v)
-  #define IP_HL(ip) ((ip)->ip_hl)
-#elif defined(_WIN32)
+#if !defined(_WIN32)
+  #ifndef INADDR_IP
+    #define INADDR_IP( _inaddr ) ((_inaddr).s_addr)
+  #endif
+  #ifndef NM_TCP_HDR_LEN
+    #define NM_TCP_HDR_LEN( hdr ) (((u_char)(hdr)->th_off ) << 2 )
+  #endif
+  #ifndef IP_V
+    #define IP_V(ip ) ((ip)->ip_v)
+  #endif
+  #ifndef IP_HL
+    #define IP_HL(ip) ((ip)->ip_hl)
+  #endif
+#else
   #define INADDR_IP( _inaddr ) ((_inaddr).S_un.S_addr)
   #define NM_TCP_HDR_LEN( hdr ) (((hdr)->th_offx2 & 0xF0 ) >> 2 )
 #endif
