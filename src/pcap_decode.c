@@ -23,6 +23,7 @@
 #include "decode.h"
 
 void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
+void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
 
 #ifndef DSSL_NO_PCAP
 pcap_handler GetPcapHandler( pcap_t* p )
@@ -35,6 +36,9 @@ pcap_handler GetPcapHandler( pcap_t* p )
 	switch( dlink )
 	{
 		case DLT_EN10MB: rc = pcap_cb_ethernet; break;
+#ifdef DLT_LINUX_SLL
+                case DLT_LINUX_SLL: rc = pcap_cb_sll; break;
+#endif
 		default:
 			/*Unsupported link type*/
 			rc = NULL;
@@ -45,6 +49,60 @@ pcap_handler GetPcapHandler( pcap_t* p )
 }
 #endif
 
+
+#ifdef DLT_LINUX_SLL
+
+#ifndef SLL_HDR_LEN
+#define SLL_HDR_LEN     16              /* total header length */
+#endif
+
+#ifndef SLL_ADDRLEN
+#define SLL_ADDRLEN     8               /* length of address field */
+#endif
+
+struct datalink_sll_header {
+        uint16_t sll_pkttype;          /* packet type */
+        uint16_t sll_hatype;           /* link-layer address type */
+        uint16_t sll_halen;            /* link-layer address length */
+        uint8_t sll_addr[SLL_ADDRLEN]; /* link-layer address */
+        uint16_t sll_protocol;         /* protocol */
+};
+
+void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data )
+{
+        CapEnv* env = (CapEnv*)ptr;
+        DSSL_Pkt packet;
+        int len = header->caplen;
+        struct datalink_sll_header *sll_header = (struct datalink_sll_header *)pkt_data;
+
+#ifdef NM_TRACE_FRAME_COUNT
+        DEBUG_TRACE1("\n-=LINUX-SLL-FRAME: %u", env->frame_cnt);
+        ++env->frame_cnt;
+#endif
+
+        memset( &packet, 0, sizeof( packet ) );
+        memcpy( &packet.pcap_header, header, sizeof(packet.pcap_header) );
+
+        packet.pcap_ptr = pkt_data;
+        packet.ether_header = (struct ether_header*) pkt_data;
+
+        if( len < SLL_HDR_LEN )
+        {
+                nmLogMessage( ERR_CAPTURE, "pcap_cb_sll: Invalid SLL header length!" );
+                return;
+        }
+
+        if( ntohs(sll_header->sll_protocol) == ETHERTYPE_IP )
+        {
+                DecodeIpPacket( env, &packet, pkt_data + SLL_HDR_LEN, len - SLL_HDR_LEN );
+        }
+
+}
+#endif
+
+#ifndef ETHERTYPE_VLAN
+#define ETHERTYPE_VLAN 0x8100
+#endif
 
 void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data )
 {

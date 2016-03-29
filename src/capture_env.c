@@ -121,7 +121,7 @@ void CapEnvDestroy( CapEnv* env )
 /* run pcap_loop on environment's pcap adapter */
 int CapEnvCapture( CapEnv* env )
 {
-	if( env->pcap_adapter == NULL ) return -1;
+	if( env->pcap_adapter == NULL || env->handler == NULL ) return -1;
     return pcap_loop( env->pcap_adapter, -1, env->handler, (u_char*) env );
 }
 #endif
