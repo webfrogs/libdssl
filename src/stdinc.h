@@ -47,6 +47,12 @@
   #define DSSL_STRDUP(x) strdup(x)
 #endif
 
+#ifndef WIN32
+#include <alloca.h>
+#else
+#include <malloc.h>
+#endif
+
 #include "ptypes.h"
 
 #ifdef _WIN32
