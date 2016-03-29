@@ -73,7 +73,7 @@ struct CapEnv_
 };
 
 
-CapEnv* CapEnvCreate( pcap_t* adapter, int sessionTableSize, uint32_t key_timeout_interval, uint32_t tcp_timeout_interval);
+CapEnv* CapEnvCreate( pcap_t* adapter, int sessionTableSize, uint32_t key_timeout_interval, uint32_t tcp_timeout_interval, uint32_t cleanup_interval);
 void CapEnvDestroy( CapEnv* env );
 
 /* TODO: add the default session data callback that will be used when no OnNewSession callback is set */

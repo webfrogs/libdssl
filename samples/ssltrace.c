@@ -195,7 +195,7 @@ int proceed( const SSTRACE_ARGS* args )
 	if( !p ) return -1;
 
 	/* Create and initialize the CapEnv structure */
-	env = CapEnvCreate( p, 100, 0, 0 );
+	env = CapEnvCreate( p, 100, 0, 0, 0 );
 
 	if( args->keyfile[0] != 0 ) {
 		rc = CapEnvSetSSL_ServerInfo( env, &args->server_ip, args->port, 

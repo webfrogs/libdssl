@@ -44,6 +44,8 @@ struct dssl_SessionTable_
 	struct CapEnv_*			env;
 	/* time in seconds sessions are kept in cache */
 	time_t					timeout_interval;
+	/* time in seconds between table cleanups */
+	time_t					cleanup_interval;
 	/* last session table cleanup time stamp */
 	time_t					last_cleanup_time;
 
@@ -65,7 +67,7 @@ struct dssl_SessionTable_
 	void		(*Cleanup)(struct dssl_SessionTable_* tbl );
 };
 
-dssl_SessionTable* CreateSessionTable( int tableSize, uint32_t timeout_int );
+dssl_SessionTable* CreateSessionTable( int tableSize, uint32_t timeout_int, uint32_t cleanup_interval );
 void DestroySessionTable( dssl_SessionTable* tbl );
 
 #ifdef  __cplusplus

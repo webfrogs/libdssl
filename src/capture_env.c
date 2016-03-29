@@ -70,12 +70,13 @@ NM_SessionType _CaptureEnv_ForReassemble( struct CapEnv_* env, struct DSSL_Pkt_*
 }
 
 
-CapEnv* CapEnvCreate( pcap_t* adapter, int sessionTableSize, uint32_t key_timeout_interval, uint32_t tcp_timeout_interval)
+CapEnv* CapEnvCreate( pcap_t* adapter, int sessionTableSize, uint32_t key_timeout_interval, uint32_t tcp_timeout_interval, uint32_t cleanup_interval)
 {
 	CapEnv* env;
 
 	if( key_timeout_interval == 0 ) key_timeout_interval = 60*60;
 	if( tcp_timeout_interval == 0 ) tcp_timeout_interval = 180;
+	if( cleanup_interval == 0 ) cleanup_interval = 300;
 
 	env = (CapEnv*) malloc( sizeof(CapEnv) );
 	memset( env, 0, sizeof(*env) );
@@ -93,7 +94,7 @@ CapEnv* CapEnvCreate( pcap_t* adapter, int sessionTableSize, uint32_t key_timeou
 
 	env->ForReassemble = _CaptureEnv_ForReassemble;
     
-	env->sessions = CreateSessionTable( sessionTableSize, tcp_timeout_interval );
+	env->sessions = CreateSessionTable( sessionTableSize, tcp_timeout_interval, cleanup_interval );
 	env->sessions->env = env;
 	env->session_callback = NULL;
 	env->env_user_data = NULL;

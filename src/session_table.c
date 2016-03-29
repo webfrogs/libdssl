@@ -352,7 +352,13 @@ static TcpSession* _SessionTable_CreateSession( dssl_SessionTable* tbl, DSSL_Pkt
 
 	/* check if a cleanup is needed */
 	if( tbl->timeout_interval != 0 && 
-		time( NULL ) - tbl->last_cleanup_time > DSSL_SESSION_CLEANUP_INTERVAL )
+		time( NULL ) - tbl->last_cleanup_time > tbl->cleanup_interval )
+	{
+		tbl->Cleanup( tbl );
+	}
+
+	/* check if the session limit is reached, then force a cleanup and check again */
+	if( tbl->maxSessionCount > 0 && tbl->sessionCount >= tbl->maxSessionCount )
 	{
 		tbl->Cleanup( tbl );
 	}
@@ -460,15 +466,22 @@ static void _SessionTable_Cleanup( dssl_SessionTable* tbl )
 {
 	int i;
 	time_t cur_time = time( NULL );
+	DSSL_Pkt pkt;
 	_ASSERT( tbl );
 
+	/* dummy packet for missing-packet tests */
+	memset(&pkt, 0, sizeof(pkt));
+	pkt.pcap_header.ts.tv_sec = cur_time;
 	for( i=0; i < tbl->tableSize && tbl->sessionCount > 0; ++i )
 	{
 		TcpSession** s = &tbl->table[i];
 		while( *s )
 		{
-			if( (*s)->last_update_time != 0 && 
-				cur_time - (*s)->last_update_time > tbl->timeout_interval )
+			if(((*s)->last_update_time != 0 && 
+				cur_time - (*s)->last_update_time > tbl->timeout_interval) ||
+				/* check for missing packet timeout in streams */
+				StreamHasMissingPacket(&(*s)->clientStream, &pkt) ||
+				StreamHasMissingPacket(&(*s)->serverStream, &pkt))
 			{
 				TcpSession* sess = *s;
 				(*s) = (*s)->next;
@@ -494,7 +507,7 @@ static void _SessionTable_Cleanup( dssl_SessionTable* tbl )
 
 
 /* dssl_SessionTable "constructor" routine */
-dssl_SessionTable* CreateSessionTable( int tableSize, uint32_t timeout_int )
+dssl_SessionTable* CreateSessionTable( int tableSize, uint32_t timeout_int, uint32_t cleanup_interval )
 {
 	dssl_SessionTable* tbl;
 
@@ -514,6 +527,7 @@ dssl_SessionTable* CreateSessionTable( int tableSize, uint32_t timeout_int )
 
 	tbl->tableSize = tableSize;
 	tbl->timeout_interval = timeout_int;
+	tbl->cleanup_interval = cleanup_interval;
 	tbl->last_cleanup_time = time( NULL );
 	tbl->maxSessionCount = 0;
 	tbl->maxCachedPacketCount = 0;
