@@ -10414,7 +10414,7 @@ CC="$lt_save_CC"
 
 # Define CXXFLAGS before AC_PROG_CXX to suppress the default autoconf
 # compiler options
-CFLAGS="-DDSSL"
+CFLAGS="${CFLAGS} -DDSSL"
 
 # introduce the optional configure parameter for OpenSSL library location
 
