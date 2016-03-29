@@ -102,7 +102,8 @@ void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *p
                 return;
         }
 
-        if( ntohs(sll_header->sll_protocol) == ETHERTYPE_IP )
+        if(( ntohs(sll_header->sll_protocol) == ETHERTYPE_IP ) ||
+			( ntohs(sll_header->sll_protocol) == ETHERTYPE_IPV6 ))
         {
                 DecodeIpPacket( env, &packet, pkt_data + SLL_HDR_LEN, len - SLL_HDR_LEN );
         }
@@ -153,7 +154,8 @@ void pcap_cb_null( u_char *ptr, const struct pcap_pkthdr *header, const u_char *
         }
 
         /* link header is in 'host byte order' (i.e. the host this was captured on) */
-        if(( endian_swap_32(null_header->null_protocol) == ETHERTYPE_IP ) || ( null_header->null_protocol == ETHERTYPE_IP ))
+        if(( endian_swap_32(null_header->null_protocol) == ETHERTYPE_IP ) || ( null_header->null_protocol == ETHERTYPE_IP ) ||
+		   ( endian_swap_32(null_header->null_protocol) == ETHERTYPE_IPV6 ) || ( null_header->null_protocol == ETHERTYPE_IPV6 ))
         {
                 DecodeIpPacket( env, &packet, pkt_data + NULL_HDR_LEN, len - NULL_HDR_LEN );
         }
@@ -230,9 +232,11 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 		return;
 	}
 
-	if (pkt_data[m_link_protocol_offset]!=0x08 || pkt_data[m_link_protocol_offset+1]!=0x00) {
+	if ((pkt_data[m_link_protocol_offset]!=0x08 || pkt_data[m_link_protocol_offset+1]!=0x00) && 
+		(pkt_data[m_link_protocol_offset]!=0x86 || pkt_data[m_link_protocol_offset+1]!=0xdd)) {
 		if ( pkt_data[m_link_protocol_offset]==0x81 && pkt_data[m_link_protocol_offset+1]==0x00		/* is vlan packet */
-			&& pkt_data[m_link_protocol_offset+4]==0x08 && pkt_data[m_link_protocol_offset+5]==0x00)	/* AND is IP packet */
+			&& ((pkt_data[m_link_protocol_offset+4]==0x08 && pkt_data[m_link_protocol_offset+5]==0x00) || /* AND is IP packet */
+				(pkt_data[m_link_protocol_offset+4]==0x86 && pkt_data[m_link_protocol_offset+5]==0xdd)))     /* or is IPv6 packet */
 		{
 			/* adjust for vlan (801.1q) packet headers */
 			pkt_link_len += 4;

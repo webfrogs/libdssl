@@ -23,6 +23,10 @@
 
 #ifdef _WIN32
   #define _CRT_SECURE_NO_WARNINGS 
+  #ifdef _WIN32_WINNT
+  #undef _WIN32_WINNT
+  #endif
+  #define _WIN32_WINNT 0x0501  // Specifies that the minimum required platform is Windows XP.
 #endif
 
 #if defined(_WIN32)
@@ -59,6 +63,7 @@
 #pragma warning(push, 3)
 #include <pcap.h>
 #pragma warning(pop)
+#include <ws2ipdef.h>
 #else
 #include <pcap.h>
 #endif

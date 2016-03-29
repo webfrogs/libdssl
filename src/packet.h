@@ -40,6 +40,7 @@ struct DSSL_Pkt_
 	uint8_t						link_type;
 	struct ether_header*		ether_header;
 	struct ip*					ip_header;
+	int							ip_header_allocated;
 	struct tcphdr*				tcp_header;
 	struct udphdr*				udp_header;
 

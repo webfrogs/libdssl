@@ -46,10 +46,15 @@ DSSL_Pkt* PktClone( const DSSL_Pkt* src )
 	pClone->pcap_ptr = (u_char*) pClone + sizeof(*pClone);
 	pClone->session = src->session;
 	pClone->link_type = src->link_type;
+	pClone->ip_header_allocated = src->ip_header_allocated;
 	
 	pClone->ether_header = (struct ether_header*)
 			( pClone->pcap_ptr + ((u_char*)src->ether_header - src->pcap_ptr ) );
-	pClone->ip_header = (struct ip*) 
+	if (src->ip_header_allocated) {
+		pClone->ip_header = malloc( sizeof( struct ip ) );
+		memcpy( pClone->ip_header, src->ip_header, sizeof( struct ip ) );
+	} else
+		pClone->ip_header = (struct ip*) 
 			( pClone->pcap_ptr + ((u_char*) src->ip_header - src->pcap_ptr ) );
 	pClone->tcp_header = (struct tcphdr*)
 			( pClone->pcap_ptr + ((u_char*) src->tcp_header - src->pcap_ptr ) );
@@ -99,10 +104,15 @@ int PktCloneChunk(const DSSL_Pkt* src, int tail_len, DSSL_Pkt** rc)
 	pClone->pcap_ptr = (u_char*) pClone + sizeof(*pClone);
 	pClone->session = src->session;
 	pClone->link_type = src->link_type;
+	pClone->ip_header_allocated = src->ip_header_allocated;
 	
 	pClone->ether_header = (struct ether_header*)
 			( pClone->pcap_ptr + ((u_char*)src->ether_header - src->pcap_ptr ) );
-	pClone->ip_header = (struct ip*) 
+	if (src->ip_header_allocated) {
+		pClone->ip_header = malloc( sizeof( struct ip ) );
+		memcpy( pClone->ip_header, src->ip_header, sizeof( struct ip ) );
+	} else
+		pClone->ip_header = (struct ip*) 
 			( pClone->pcap_ptr + ((u_char*) src->ip_header - src->pcap_ptr ) );
 	pClone->tcp_header = (struct tcphdr*)
 			( pClone->pcap_ptr + ((u_char*) src->tcp_header - src->pcap_ptr ) );
@@ -126,6 +136,9 @@ int PktCloneChunk(const DSSL_Pkt* src, int tail_len, DSSL_Pkt** rc)
 
 void PktFree( DSSL_Pkt* pkt )
 {
+	if ( pkt->ip_header_allocated ) {
+		free( pkt->ip_header );
+	}
 	free( pkt );
 }
 

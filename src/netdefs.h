@@ -67,6 +67,10 @@
   #include <netinet/ip.h>
   #include <netinet/tcp.h>
   #include <netinet/udp.h>
+  #include <netinet/ip6.h>
+  #ifndef ETHERTYPE_IPV6
+    #define ETHERTYPE_IPV6  0x86dd
+  #endif
   #ifndef ETHER_HDRLEN
     #define ETHER_HDRLEN  14
   #endif
