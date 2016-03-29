@@ -505,9 +505,9 @@ void SessionFlushPacketQueue( TcpSession* sess )
 		if(PKT_TCP_SEQ( stream->pktHead ) - stream->nextSeqExpected == 0)
 			stream = NULL; /*no missing packets */
 		
-		/* both streams have packets, pick the latest */
+		/* both streams have packets, pick the oldest */
 		if(stream == NULL) {
-			stream = PktCompareTimes( sess->serverStream.pktHead, sess->clientStream.pktHead ) < 0 ?
+			stream = PktCompareTimes( sess->serverStream.pktHead, sess->clientStream.pktHead ) > 0 ?
 				&sess->clientStream : &sess->serverStream;
 		}
 	} else {
