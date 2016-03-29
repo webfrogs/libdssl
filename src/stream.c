@@ -565,6 +565,7 @@ static int StreamEnqueue( TcpStream* stream, DSSL_Pkt* pkt )
 #ifdef NM_TRACE_TCP_STREAMS
 		DEBUG_TRACE1( "\n%s: Error: reassembly queue limit reached, dropping the session", StreamToString(stream));
 #endif
+		pkt->session->closing = 1;
 		return NM_ERROR( DSSL_E_TCP_REASSEMBLY_QUEUE_FULL );
 	}
 
@@ -575,6 +576,7 @@ static int StreamEnqueue( TcpStream* stream, DSSL_Pkt* pkt )
 		_ASSERT(tbl);
 		if( tbl->maxCachedPacketCount > 0 && tbl->packet_cache_count >= tbl->maxCachedPacketCount)
 		{
+			pkt->session->closing = 1;
 			return NM_ERROR( DSSL_E_TCP_GLOBAL_REASSEMBLY_QUEUE_LIMIT );
 		}
 	}
@@ -865,6 +867,7 @@ int StreamProcessPacket( TcpStream* stream, DSSL_Pkt* pkt, int* new_ack )
 				if( retcode ) {
 					rc = StreamConsumeHead( stream, new_ack );
 				} else {
+					pkt->session->closing = 1;
 					rc = NM_ERROR( DSSL_E_TCP_MISSING_PACKET_DETECTED );
 				}
 			} else {

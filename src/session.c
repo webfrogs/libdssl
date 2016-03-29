@@ -315,7 +315,11 @@ void SessionProcessPacket( CapEnv* env, DSSL_Pkt* pkt )
 	{
 		if (rc == DSSL_RC_OK)
 			SessionFlushPacketQueue( pkt->session );
-		env->sessions->DestroySession( env->sessions, pkt->session );
+		else if ( pkt->session->type == eSessionTypeSSL ) 
+			pkt->session->type = eSessionTypeTcp; /* session is not decodable as SSL anymore */
+
+		if (pkt->session->closing)
+			env->sessions->DestroySession( env->sessions, pkt->session );
 	}
 }
 
@@ -455,7 +459,8 @@ static int OnNewSSLPacket( struct _TcpStream* stream, DSSL_Pkt* pkt )
 	len = pkt->data_len;
 	dir = SessionGetPacketDirection( sess, pkt );
 
-	rc = DSSL_SessionProcessData( ssl_sess, dir, data, len );
+	if( sess->type == eSessionTypeSSL )
+		rc = DSSL_SessionProcessData( ssl_sess, dir, data, len );
 
 	if( ssl_sess->flags & ( SSF_CLOSE_NOTIFY_RECEIVED | SSF_FATAL_ALERT_RECEIVED ) )
 	{

@@ -64,7 +64,7 @@ NM_SessionType _CaptureEnv_ForReassemble( struct CapEnv_* env, struct DSSL_Pkt_*
 {
 	if( CapEnvIsSSLPacket( env, pkt ) ) return eSessionTypeSSL;
 
-	if( CapEnvIsMissingKeyServerPacket( env, pkt )) return eSessionTypeNull;
+	if( CapEnvIsMissingKeyServerPacket( env, pkt )) return eSessionTypeSSL;
 
 	return eSessionTypeTBD;
 }
