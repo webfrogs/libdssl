@@ -73,7 +73,7 @@ void DecodeUdpPacket( CapEnv* env, DSSL_Pkt* pkt, const uint8_t* data, const int
 
 void DecodeIpPacket( CapEnv* env, DSSL_Pkt* pkt, const uint8_t* data, const int len )
 {
-	int ip_len, ip_hdrlen;
+	int ip_pkt_len, ip_hdrlen;
 
 	pkt->ip_header = (struct ip*) data;
 
@@ -92,7 +92,7 @@ void DecodeIpPacket( CapEnv* env, DSSL_Pkt* pkt, const uint8_t* data, const int 
 
 	/*TODO: reassemble fragmented packets*/
 
-	ip_len = ntohs(pkt->ip_header->ip_len);
+	ip_pkt_len = ntohs(pkt->ip_header->ip_len);
 	ip_hdrlen = IP_HL(pkt->ip_header) << 2;
 
 	if( ip_hdrlen < sizeof(struct ip) )
@@ -103,10 +103,10 @@ void DecodeIpPacket( CapEnv* env, DSSL_Pkt* pkt, const uint8_t* data, const int 
 
 	if( pkt->ip_header->ip_p == IPPROTO_TCP )
 	{
-		DecodeTcpPacket( env, pkt, data + ip_hdrlen, ip_len - ip_hdrlen );
+		DecodeTcpPacket( env, pkt, data + ip_hdrlen, ip_pkt_len - ip_hdrlen );
 	}
 	else if( pkt->ip_header->ip_p == IPPROTO_UDP && env->datagram_callback != NULL )
 	{
-		DecodeUdpPacket( env, pkt, data + ip_hdrlen, ip_len - ip_hdrlen );
+		DecodeUdpPacket( env, pkt, data + ip_hdrlen, ip_pkt_len - ip_hdrlen );
 	}
 }

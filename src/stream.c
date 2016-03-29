@@ -394,7 +394,7 @@ static uint32_t PreProcessPacket( DSSL_Pkt* pkt )
 {
 	int dir;
 	TcpStream* sender, *receiver;
-	int th_flags;
+	int th_pkt_flags;
 	uint32_t th_seq;
 	TcpSession* sess = pkt->session;
 
@@ -415,18 +415,18 @@ static uint32_t PreProcessPacket( DSSL_Pkt* pkt )
 		return PREPROC_ACTION_CLOSE;
 	}
 
-	th_flags = pkt->tcp_header->th_flags;
+	th_pkt_flags = pkt->tcp_header->th_flags;
 	th_seq = ntohl( pkt->tcp_header->th_seq );
 
-	if( th_flags & TH_RST ) {
+	if( th_pkt_flags & TH_RST ) {
 		sender->flags |= DSSL_TCPSTREAM_SENT_RST; 
 		return PREPROC_ACTION_CLOSE;
 	}
 
-	if( th_flags & TH_SYN ) { 
+	if( th_pkt_flags & TH_SYN ) {
 		sender->flags |= DSSL_TCPSTREAM_SENT_SYN; 
 	}
-	if( th_flags & TH_FIN ) {
+	if( th_pkt_flags & TH_FIN ) {
 		sender->flags |= DSSL_TCPSTREAM_SENT_FIN;
 	}
 	if( (sender->flags & DSSL_TCPSTREAM_SENT_FIN) && (receiver->flags & DSSL_TCPSTREAM_SENT_FIN) ) {
