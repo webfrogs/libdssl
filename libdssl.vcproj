@@ -21,8 +21,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="Debug"
-			IntermediateDirectory="Debug"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_win32.vsprops"
 			CharacterSet="2"
@@ -49,7 +49,7 @@
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="4"
@@ -86,8 +86,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(ConfigurationName)_$(PlatformName)"
-			IntermediateDirectory="$(ConfigurationName)_$(PlatformName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_x64.vsprops"
 			CharacterSet="2"
@@ -115,7 +115,7 @@
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -152,8 +152,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="Release"
-			IntermediateDirectory="Release"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_win32.vsprops"
 			CharacterSet="2"
@@ -177,7 +177,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=".\win32\include;&quot;$(DSSL_OPENSSL_INC)&quot;;&quot;$(DSSL_PCAP_INC)&quot;;&quot;$(DSSL_ZLIB_INC)&quot;"
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;NDEBUG;_LIB"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -214,8 +214,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(ConfigurationName)_$(PlatformName)"
-			IntermediateDirectory="$(ConfigurationName)_$(PlatformName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_x64.vsprops"
 			CharacterSet="2"
@@ -240,7 +240,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=".\win32\include;c:\WpdPack-4.1.2\Include;&quot;C:\openssl-0.9.8l\inc64&quot;;&quot;c:\zlib-1.2.3\include&quot;"
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;NDEBUG;_LIB"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -277,8 +277,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-DSSL_NO_PCAP|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_win32.vsprops"
 			CharacterSet="2"
@@ -305,7 +305,7 @@
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;_DEBUG;_LIB;DSSL_NO_PCAP"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="4"
@@ -342,8 +342,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-DSSL_NO_PCAP|x64"
-			OutputDirectory="$(ConfigurationName)_$(PlatformName)"
-			IntermediateDirectory="$(ConfigurationName)_$(PlatformName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_x64.vsprops"
 			CharacterSet="2"
@@ -371,7 +371,7 @@
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;_DEBUG;_LIB;DSSL_NO_PCAP"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="true"
@@ -409,8 +409,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release-DSSL_NO_PCAP|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_win32.vsprops"
 			CharacterSet="2"
@@ -434,7 +434,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=".\win32\include;&quot;$(DSSL_OPENSSL_INC)&quot;;&quot;$(DSSL_PCAP_INC)&quot;;&quot;$(DSSL_ZLIB_INC)&quot;"
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;NDEBUG;_LIB;DSSL_NO_PCAP"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -471,8 +471,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release-DSSL_NO_PCAP|x64"
-			OutputDirectory="$(ConfigurationName)_$(PlatformName)"
-			IntermediateDirectory="$(ConfigurationName)_$(PlatformName)"
+			OutputDirectory="$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;.\win32\dssl_third_party_libs_x64.vsprops"
 			CharacterSet="2"
@@ -497,7 +497,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=".\win32\include;c:\WpdPack-4.1.2\Include;&quot;C:\openssl-0.9.8l\inc64&quot;;&quot;c:\zlib-1.2.3\include&quot;"
 				PreprocessorDefinitions="WIN32;_WIN32_WINNT=0x0500;NDEBUG;_LIB;DSSL_NO_PCAP"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="true"
