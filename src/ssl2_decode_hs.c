@@ -309,7 +309,7 @@ static int ssl2_decode_client_master_key(  DSSL_Session* sess, u_char* data, uin
 				if( ssls_register_ssl_key( sess, pk ) == DSSL_RC_OK)
 				{
 					/* ssls_register_ssl_key clones the key, query the key back */
-					//pk = ssls_get_session_private_key( sess );
+					/* pk = ssls_get_session_private_key( sess ); */
 				}
 				else
 				{

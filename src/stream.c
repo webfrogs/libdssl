@@ -311,7 +311,7 @@ static int GetAcknowledgingPacketIndex( const DSSL_Pkt* queue_head, uint32_t seq
 
 static int IsDeadlocked( const TcpStream* stream )
 {
-	//return 0;
+	/*return 0;*/
 	const TcpStream* peer = NULL;
 	if(!stream)	{
 		_ASSERT(stream != NULL);
@@ -801,7 +801,7 @@ int StreamProcessPacket( TcpStream* stream, DSSL_Pkt* pkt, int* new_ack )
 		stream->initial_seq = PKT_TCP_SEQ(pkt);
 		stream->syn_time = pkt->pcap_header.ts;
 
-		// check if this is SYN+ACK packet and SYN packet was missing
+		/* check if this is SYN+ACK packet and SYN packet was missing */
 		if(pkt->tcp_header->th_flags & TH_ACK && StreamGetPeer(stream))
 		{
 			TcpStream* peer = StreamGetPeer(stream);

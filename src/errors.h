@@ -26,7 +26,7 @@
 #define DSSL_RC_WOULD_BLOCK						1
 #define DSSL_RC_OK								0
 #define DSSL_E_OUT_OF_MEMORY					(-1)
-//#define DSSL_E_SSL_LOAD_CERTIFICATE				(-3)
+/*#define DSSL_E_SSL_LOAD_CERTIFICATE				(-3) */
 #define DSSL_E_SSL_LOAD_PRIVATE_KEY				(-4)
 #define DSSL_E_SSL_UNKNOWN_VERSION				(-5)
 #define DSSL_E_INVALID_PARAMETER				(-6)

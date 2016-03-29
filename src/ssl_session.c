@@ -287,7 +287,7 @@ int ssls_generate_keys( DSSL_Session* sess )
 
 	if( sess->c_dec.cipher_new != NULL )
 	{
-//		_ASSERT( FALSE );
+/*		_ASSERT( FALSE ); */
 		EVP_CIPHER_CTX_cleanup( sess->c_dec.cipher_new );
 		free( sess->c_dec.cipher_new );
 		sess->c_dec.cipher_new = NULL;
@@ -295,7 +295,7 @@ int ssls_generate_keys( DSSL_Session* sess )
 
 	if( sess->s_dec.cipher_new != NULL )
 	{
-//		_ASSERT( FALSE );
+/*		_ASSERT( FALSE ); */
 		EVP_CIPHER_CTX_cleanup( sess->s_dec.cipher_new );
 		free( sess->s_dec.cipher_new );
 		sess->s_dec.cipher_new = NULL;

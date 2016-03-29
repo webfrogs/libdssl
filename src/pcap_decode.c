@@ -231,10 +231,10 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 	}
 
 	if (pkt_data[m_link_protocol_offset]!=0x08 || pkt_data[m_link_protocol_offset+1]!=0x00) {
-		if ( pkt_data[m_link_protocol_offset]==0x81 && pkt_data[m_link_protocol_offset+1]==0x00		// is vlan packet
-			&& pkt_data[m_link_protocol_offset+4]==0x08 && pkt_data[m_link_protocol_offset+5]==0x00)	// AND is IP packet
+		if ( pkt_data[m_link_protocol_offset]==0x81 && pkt_data[m_link_protocol_offset+1]==0x00		/* is vlan packet */
+			&& pkt_data[m_link_protocol_offset+4]==0x08 && pkt_data[m_link_protocol_offset+5]==0x00)	/* AND is IP packet */
 		{
-			// adjust for vlan (801.1q) packet headers
+			/* adjust for vlan (801.1q) packet headers */
 			pkt_link_len += 4;
 #ifdef NEED_ALIGNMENT
 	    pkt_data[ETHER_HDRLEN] =     pkt_data[ETHER_HDRLEN + n];
@@ -243,7 +243,7 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 	    pkt_data[ETHER_HDRLEN + 3] = pkt_data[ETHER_HDRLEN + n + 3];
 #endif
 		} else {
-			// not an ethernet packet or non-IP vlan packet
+			/* not an ethernet packet or non-IP vlan packet */
 #ifdef NEED_ALIGNMENT
 			if(_pkt_data)
 				free(_pkt_data);
@@ -251,7 +251,7 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 			return;
 		}
 	}
-//	if( ntohs(packet.ether_header->ether_type) == ETHERTYPE_IP )
+/*	if( ntohs(packet.ether_header->ether_type) == ETHERTYPE_IP ) */
 	{
 		DecodeIpPacket( env, &packet, pkt_data + pkt_link_len, len - ETHER_HDRLEN );
 	}

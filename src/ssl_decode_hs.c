@@ -238,7 +238,7 @@ static int ssl3_decode_server_hello( DSSL_Session* sess, u_char* data, uint32_t 
 		if(!IS_ENOUGH_LENGTH( org_data, len, data, t_len)) 
 			return NM_ERROR(DSSL_E_SSL_INVALID_RECORD_LENGTH);
 
-		// cycle through extension records
+		/* cycle through extension records */
 		while(t_len >= 4)
 		{
 			int ext_type = MAKE_UINT16(data[0], data[1]); /* extension type */
@@ -521,7 +521,7 @@ static int ssl3_decode_server_certificate( DSSL_Session* sess, u_char* data, uin
 
 	if( !sess ) return NM_ERROR( DSSL_E_INVALID_PARAMETER );
 
-	//TBD: skip server certificate check if SSL key has not yet been mapped for this server
+	/* TBD: skip server certificate check if SSL key has not yet been mapped for this server */
 	if( !sess->ssl_si ) return DSSL_RC_OK;
 
 	if( !sess->ssl_si->pkey ) return NM_ERROR( DSSL_E_UNINITIALIZED_ARGUMENT );
