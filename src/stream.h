@@ -69,6 +69,8 @@ struct _TcpStream
 	uint32_t		nextSeqExpected;
 	/*! latest and greatest ACK sequence */
 	uint32_t		lastPacketAck;
+	/*! latest and greatest ACK time */
+	struct timeval	lastPacketAckTime;
 	/*! parent TCP session object */
 	TcpSession*		session;
 	/*! size of the reassembly queue*/

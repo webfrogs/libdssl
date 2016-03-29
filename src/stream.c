@@ -440,6 +440,7 @@ static void StreamUpdateACK( TcpStream* stream, uint32_t new_ack, struct timeval
 {
 	TcpStream* peer = StreamGetPeer( stream );
 	stream->lastPacketAck = new_ack;
+	stream->lastPacketAckTime = (*ack_time);
 	_ASSERT(ack_time);
 
 	/* store ack packet time in the buffer */
@@ -596,6 +597,7 @@ static int StreamEnqueue( TcpStream* stream, DSSL_Pkt* pkt )
 	if( seq == stream->nextSeqExpected && stream->lastPacketAck < PKT_TCP_ACK(pkt))
 	{
 		stream->lastPacketAck = PKT_TCP_ACK(pkt);
+		stream->lastPacketAckTime = pkt->pcap_header.ts;
 	}
 
 	/* simple case - first packet in the list */
@@ -738,6 +740,11 @@ int StreamHasMissingPacket(TcpStream* stream, DSSL_Pkt* pkt)
 		if( s->type == eSessionTypeTBD &&
 			( (stream->flags & DSSL_TCPSTREAM_SENT_SYN) ) &&
 			IsPacketTimeout(stream, pkt, &stream->syn_time) )
+			return 1;
+		/* if we sent a FIN/RST and nothing came back */
+		if( s->type == eSessionTypeTcp && 
+			( (stream->flags & (DSSL_TCPSTREAM_SENT_FIN | DSSL_TCPSTREAM_SENT_RST)) ) &&
+			IsPacketTimeout(stream, pkt, &stream->lastPacketAckTime) )
 			return 1;
 		return 0;
 	}
