@@ -24,6 +24,7 @@
 
 void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
 void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
+void pcap_cb_null( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
 
 #ifndef DSSL_NO_PCAP
 pcap_handler GetPcapHandler( pcap_t* p )
@@ -38,6 +39,9 @@ pcap_handler GetPcapHandler( pcap_t* p )
 		case DLT_EN10MB: rc = pcap_cb_ethernet; break;
 #ifdef DLT_LINUX_SLL
                 case DLT_LINUX_SLL: rc = pcap_cb_sll; break;
+#endif
+#ifdef DLT_NULL
+                case DLT_NULL: rc = pcap_cb_null; break;
 #endif
 		default:
 			/*Unsupported link type*/
@@ -95,6 +99,57 @@ void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *p
         if( ntohs(sll_header->sll_protocol) == ETHERTYPE_IP )
         {
                 DecodeIpPacket( env, &packet, pkt_data + SLL_HDR_LEN, len - SLL_HDR_LEN );
+        }
+
+}
+#endif
+
+#ifdef DLT_NULL
+
+#ifndef NULL_HDR_LEN
+#define NULL_HDR_LEN     4              /* total header length */
+#endif
+
+struct datalink_null_header {
+        uint32_t null_protocol;         /* protocol */
+};
+
+static uint32_t endian_swap_32(uint32_t x)
+{
+        uint32_t y;
+        y = (x>>24) | ((x<<8) & 0x00FF0000) |((x>>8) & 0x0000FF00) |(x<<24);
+
+        return y;
+}
+
+void pcap_cb_null( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data )
+{
+        CapEnv* env = (CapEnv*)ptr;
+        DSSL_Pkt packet;
+        int len = header->caplen;
+        struct datalink_null_header *null_header = (struct datalink_null_header *)pkt_data;
+
+#ifdef NM_TRACE_FRAME_COUNT
+        DEBUG_TRACE1("\n-=NULL-FRAME: %u", env->frame_cnt);
+        ++env->frame_cnt;
+#endif
+
+        memset( &packet, 0, sizeof( packet ) );
+        memcpy( &packet.pcap_header, header, sizeof(packet.pcap_header) );
+
+        packet.pcap_ptr = pkt_data;
+        packet.ip_header = (struct ip*) pkt_data + NULL_HDR_LEN;
+
+        if( len < NULL_HDR_LEN )
+        {
+                nmLogMessage( ERR_CAPTURE, "pcap_cb_null: Invalid NULL header length!" );
+                return;
+        }
+
+        /* link header is in 'host byte order' (i.e. the host this was captured on) */
+        if(( endian_swap_32(null_header->null_protocol) == ETHERTYPE_IP ) || ( null_header->null_protocol == ETHERTYPE_IP ))
+        {
+                DecodeIpPacket( env, &packet, pkt_data + NULL_HDR_LEN, len - NULL_HDR_LEN );
         }
 
 }
