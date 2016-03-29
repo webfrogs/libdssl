@@ -213,7 +213,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign 
 EXTRA_DIST = docs win32 libdssl.vcproj
-SUBDIRS = src samples tests
+SUBDIRS = src
 all: all-recursive
 
 .SUFFIXES:
