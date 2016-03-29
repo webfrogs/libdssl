@@ -714,18 +714,30 @@ static NM_PacketDir StreamGetPacketDirection( TcpStream* stream )
 }
 
 
+int IsPacketTimeout(TcpStream* stream, DSSL_Pkt* pkt, struct timeval *tv)
+{
+	TcpSession* s = stream->session;
+	_ASSERT(s);
+
+	if( s->missing_packet_timeout && pkt->pcap_header.ts.tv_sec - tv->tv_sec 
+		> s->missing_packet_timeout )
+		return 1;
+	
+	return 0;
+}
+
+
 int StreamHasMissingPacket(TcpStream* stream, DSSL_Pkt* pkt)
 {
 	TcpSession* s = stream->session;
 	_ASSERT(s);
 
 	if(s->type != eSessionTypeTcp || s->missing_callback == NULL ) return 0;
-	if( stream->pktHead == NULL || PKT_TCP_SEQ(stream->pktHead) == stream->nextSeqExpected) return 0;
-	if( s->missing_packet_count && stream->queue_size >= s->missing_packet_count ) 
+	if( stream->pktHead == NULL ) return 0;
+	if( IsPacketTimeout(stream, pkt, &stream->pktHead->pcap_header.ts) )
 		return 1;
-
-	if( s->missing_packet_timeout && pkt->pcap_header.ts.tv_sec - stream->pktHead->pcap_header.ts.tv_sec 
-			> s->missing_packet_timeout )
+	if( PKT_TCP_SEQ(stream->pktHead) == stream->nextSeqExpected) return 0;
+	if( s->missing_packet_count && stream->queue_size >= s->missing_packet_count ) 
 		return 1;
 
 	return 0;
@@ -854,7 +866,7 @@ int StreamProcessPacket( TcpStream* stream, DSSL_Pkt* pkt, int* new_ack )
 			/* must be at least one packet in the queue */
 			_ASSERT( stream->pktHead );
 
-			if (PKT_TCP_SEQ( stream->pktHead ) > stream->nextSeqExpected) {
+			if ((PKT_TCP_SEQ( stream->pktHead ) > stream->nextSeqExpected) || IsPacketTimeout(stream, pkt, &stream->pktHead->pcap_header.ts)) {
 				len = PKT_TCP_SEQ( stream->pktHead ) - stream->nextSeqExpected;
 				
 				#ifdef NM_TRACE_TCP_STREAMS
