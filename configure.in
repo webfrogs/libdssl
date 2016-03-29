@@ -54,7 +54,8 @@ AC_ARG_ENABLE(debug,
                   fi
                 ], [CFLAGS="$CFLAGS -O2 -DNDEBUG"] )
 
-LIBS="-lz -lssl -lcrypto -ldl $LIBS"
+AC_CHECK_LIB([dl],[dlopen],[DL_LIBS="-ldl"])
+LIBS="-lz -lssl -lcrypto $DL_LIBS $LIBS"
 
 
 AC_CONFIG_FILES([Makefile src/Makefile samples/Makefile tests/Makefile])
