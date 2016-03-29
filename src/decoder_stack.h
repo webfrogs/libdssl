@@ -52,11 +52,11 @@ struct dssl_decoder_stack_
 	const EVP_MD*	md;
 
 	uint64_t		seq_num;
-	u_char			mac_key[EVP_MAX_MD_SIZE];
+	u_char			mac_key[EVP_MAX_MD_SIZE*2];
 
 	EVP_CIPHER_CTX* cipher_new;
 	const EVP_MD*	md_new;
-	u_char			mac_key_new[EVP_MAX_MD_SIZE];
+	u_char			mac_key_new[EVP_MAX_MD_SIZE*2];
 
 	char			compression_method;
 	void*			compression_data; /* data structure to keep compression algorithm's state */

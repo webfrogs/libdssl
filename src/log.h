@@ -41,6 +41,7 @@
 #endif
 
 void nmLogMessage( uint32_t category, const char* fmt, ... );
+void DumpBuffer(const char *label, const unsigned char *data, int data_len);
 
 #define LG_SEVERITY_MESSAGE	0x1000
 #define LG_SEVERITY_WARNING	0x2000
@@ -64,12 +65,14 @@ void nmLogMessage( uint32_t category, const char* fmt, ... );
 	#define DEBUG_TRACE2( fmt, p1, p2 ) printf( fmt, p1, p2 )
 	#define DEBUG_TRACE3( fmt, p1, p2, p3 ) printf( fmt, p1, p2, p3 )
 	#define DEBUG_TRACE4( fmt, p1, p2, p3, p4 ) printf( fmt, p1, p2, p3, p4 )
+	#define DEBUG_TRACE_BUF( name, ptr, len ) DumpBuffer( name, ptr, len )
 #else
 	#define DEBUG_TRACE0( fmt )
 	#define DEBUG_TRACE1( fmt, p1 ) 
 	#define DEBUG_TRACE2( fmt, p1, p2 ) 
 	#define DEBUG_TRACE3( fmt, p1, p2, p3 )
 	#define DEBUG_TRACE4( fmt, p1, p2, p3, p4 )
+	#define DEBUG_TRACE_BUF( name, ptr, len )
 #endif
 
 #endif

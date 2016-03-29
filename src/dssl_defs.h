@@ -60,6 +60,9 @@ typedef enum NM_SessionEvents_
 struct DSSL_Pkt_;
 typedef struct DSSL_Pkt_ DSSL_Pkt;
 
+struct DSSL_handshake_buffer_;
+typedef struct DSSL_handshake_buffer_ DSSL_handshake_buffer;
+
 struct DSSL_Session_;
 typedef struct DSSL_Session_ DSSL_Session;
 

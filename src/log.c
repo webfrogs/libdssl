@@ -27,9 +27,9 @@
 #include "errors.h"
 
 #ifdef _DEBUG
-int NmDebugCatchError( int rc )
+int NmDebugCatchError( int rc, int line, const char* file  )
 {
-	printf( "\nDSSL error: %d\n", rc );
+	printf( "\nDSSL error: %d at %s@%u\n", rc, file, line );
 	return rc;
 }
 
@@ -59,4 +59,35 @@ void nmLogMessage( uint32_t category, const char* fmt, ... )
   /*TODO*/
 	category;
 	fmt;
+}
+
+void DumpBuffer(const char *label, const unsigned char *data, int data_len)
+{
+#if 1
+	int i, j;
+	
+	if (NULL == data)
+		data_len = 0;
+
+	printf("\nDUMP '%s' (%u)\n", label, data_len);
+	for(i=0;i<data_len;i+=16) {
+		printf("| ");
+		for (j = 0; j < 16 && (i+j) < data_len; ++j) {
+			printf("%.2x ",data[i+j]&255);
+		}
+		for (; j < 16; ++j)
+			printf("   ");
+		
+		printf("| |");
+		for (j = 0; j < 16 && (i+j) < data_len; ++j) {
+			if(isprint(data[i+j]))
+				printf("%c",data[i+j]);
+			else
+				printf(".");
+		}
+		for (; j < 16; ++j)
+			printf(" ");
+		printf("|\n");
+	}
+#endif
 }

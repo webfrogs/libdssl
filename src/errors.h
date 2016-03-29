@@ -92,10 +92,10 @@ DSSL_EnvSetServerInfo */
 #define DSSL_E_TCP_GLOBAL_REASSEMBLY_QUEUE_LIMIT (-39)
 
 #ifdef _DEBUG
-	int NmDebugCatchError( int rc );
-	#define NM_ERROR( rc ) NmDebugCatchError( rc )
+	int NmDebugCatchError( int rc, int line, const char* file );
+	#define NM_ERROR( rc ) NmDebugCatchError( rc, __LINE__, __FILE__ )
 #else
-	#define NM_ERROR( rc ) (rc)
+	#define NM_ERROR( rc ) ( rc )
 #endif
 
 #endif

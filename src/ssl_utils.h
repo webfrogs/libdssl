@@ -30,6 +30,11 @@ int ssl3_PRF( const u_char* secret, uint32_t secret_len,
 		const u_char* random2, uint32_t random2_len,
 		u_char* out, uint32_t out_len );
 
+int tls12_PRF( const EVP_MD *md, const u_char* secret, uint32_t secret_len,
+		const char* label, u_char* random1, uint32_t random1_len,
+		u_char* random2, uint32_t random2_len,
+		u_char *out, uint32_t out_len );
+
 int tls1_PRF( const u_char* secret, uint32_t secret_len,
 		const char* label, u_char* random1, uint32_t random1_len,
 		u_char* random2, uint32_t random2_len,

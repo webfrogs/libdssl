@@ -87,6 +87,8 @@ int dssl_decoder_stack_set( dssl_decoder_stack* d, DSSL_Session* sess, uint16_t 
 	{
 	case SSL3_VERSION:
 	case TLS1_VERSION:
+	case TLS1_1_VERSION:
+	case TLS1_2_VERSION:
 		dssl_decoder_init( &d->drecord, ssl3_record_layer_decoder, d );
 		dssl_decoder_init( &d->dhandshake, ssl3_decode_handshake_record, d );
 		dssl_decoder_init( &d->dcss, ssl3_change_cipher_spec_decoder, d );
@@ -142,7 +144,7 @@ int dssl_decoder_stack_flip_cipher( dssl_decoder_stack* stack )
 	stack->cipher = stack->cipher_new;
 
 	if(  stack->md_new != NULL && stack->sess && 
-		(stack->sess->version == SSL3_VERSION || stack->sess->version == TLS1_VERSION) )
+		stack->sess->version >= SSL3_VERSION )
 	{
 		memcpy( stack->mac_key, stack->mac_key_new, EVP_MD_size( stack->md_new ) );
 	}

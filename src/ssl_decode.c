@@ -26,6 +26,7 @@
 #include "session.h"
 #include "decoder_stack.h"
 #include "compression.h"
+#include "ciphersuites.h"
 
 int ssl3_change_cipher_spec_decoder( void* decoder_stack, NM_PacketDir dir,
 		u_char* data, uint32_t len, uint32_t* processed )
@@ -116,6 +117,7 @@ static int ssl_decrypt_record( dssl_decoder_stack* stack, u_char* data, uint32_t
 	c = EVP_CIPHER_CTX_cipher( stack->cipher );
 	block_size = EVP_CIPHER_block_size( c );
 
+	DEBUG_TRACE3( "using cipher %s (mode=%u, block=%u)\n", EVP_CIPHER_name(c), stack->sess->cipher_mode, block_size );
 	if( block_size != 1 )
 	{
 		if( len == 0 || (len % block_size) != 0 )
@@ -124,7 +126,36 @@ static int ssl_decrypt_record( dssl_decoder_stack* stack, u_char* data, uint32_t
 		}
 	}
 
-	EVP_Cipher(stack->cipher, buf, data, len );
+	DEBUG_TRACE_BUF("encrypted", data, len);
+	
+	if ( EVP_CIPH_GCM_MODE == stack->sess->cipher_mode || EVP_CIPH_CCM_MODE == stack->sess->cipher_mode )
+	{
+		if ( len < EVP_GCM_TLS_EXPLICIT_IV_LEN )
+		{
+			return NM_ERROR( DSSL_E_SSL_DECRYPTION_ERROR );
+		}
+
+		if ( EVP_CIPH_GCM_MODE == stack->sess->cipher_mode )
+		{
+			/* set 'explicit_nonce' part from message bytes */
+			rc = EVP_CIPHER_CTX_ctrl(stack->cipher, EVP_CTRL_GCM_SET_IV_INV, EVP_GCM_TLS_EXPLICIT_IV_LEN, data);
+		}
+		else
+		{
+			/* 4 bytes write_iv, 8 bytes explicit_nonce, 4 bytes counter */
+			u_char ccm_nonce[EVP_GCM_TLS_TAG_LEN] = { 0 };		
+			rc = EVP_CIPHER_CTX_ctrl(stack->cipher, EVP_CTRL_CCM_GET_TAG, sizeof(ccm_nonce), ccm_nonce);
+			if( rc != DSSL_RC_OK ) return rc;
+			
+			/* overwrite exlicit_nonce part with packet data */
+			memcpy(ccm_nonce + 1 + EVP_GCM_TLS_FIXED_IV_LEN, data, EVP_GCM_TLS_EXPLICIT_IV_LEN);
+			rc = EVP_CIPHER_CTX_ctrl(stack->cipher, EVP_CTRL_CCM_SET_TAG, sizeof(ccm_nonce), ccm_nonce);
+			if( rc != DSSL_RC_OK ) return rc;
+		}
+		data += EVP_GCM_TLS_EXPLICIT_IV_LEN;
+		len -= EVP_GCM_TLS_EXPLICIT_IV_LEN;
+	}
+	rc = EVP_Cipher(stack->cipher, buf, data, len );
 
 	buf_len = len;
 	/* strip the padding */
@@ -132,6 +163,17 @@ static int ssl_decrypt_record( dssl_decoder_stack* stack, u_char* data, uint32_t
 	{
 		if( buf[len-1] >= buf_len - 1 ) return NM_ERROR( DSSL_E_SSL_DECRYPTION_ERROR );
 		buf_len -= buf[len-1] + 1;
+	}
+	
+	DEBUG_TRACE_BUF("decrypted", buf, buf_len);
+	
+	/* ignore auth tag, which is 16 (for CCM/GCM) or 8 (for CCM-8) bytes */
+	if ( EVP_CIPH_GCM_MODE == stack->sess->cipher_mode || EVP_CIPH_CCM_MODE == stack->sess->cipher_mode )
+	{
+		if (NULL == stack->sess->dssl_cipher_suite->extra_info)
+			buf_len -= EVP_GCM_TLS_TAG_LEN;
+		else
+			buf_len -= (size_t)stack->sess->dssl_cipher_suite->extra_info;
 	}
 
 	*out = buf;
@@ -212,7 +254,7 @@ int ssl3_record_layer_decoder( void* decoder_stack, NM_PacketDir dir,
 	len -= SSL3_HEADER_LEN;
 
 #ifdef NM_TRACE_SSL_RECORD
-	DEBUG_TRACE2( "\n==>Decoding SSL v3 Record, type: %d, len: %d\n{\n", (int) record_type, (int) recLen );
+	DEBUG_TRACE3( "\n==>Decoding SSL v3 Record from %s, type: %d, len: %d\n{\n", ((dir == ePacketDirFromClient)?"client":"server"), (int) record_type, (int) recLen );
 #endif
 
 	rc = DSSL_RC_OK;
@@ -225,25 +267,45 @@ int ssl3_record_layer_decoder( void* decoder_stack, NM_PacketDir dir,
 
 	/* check if the record length is still within bounds (failed decryption, etc) */
 	if( rc == DSSL_RC_OK && (recLen > RFC_2246_MAX_COMPRESSED_LENGTH || 
-		recLen > len || (stack->md && recLen < EVP_MD_size(stack->md))) )
+		recLen > len || (stack->sess->version < TLS1_2_VERSION && stack->md && recLen < EVP_MD_size(stack->md))) )
 	{
 		rc = NM_ERROR(DSSL_E_SSL_INVALID_RECORD_LENGTH);
 	}
 
 	if( rc == DSSL_RC_OK && stack->md )
 	{
-		u_char mac[EVP_MAX_MD_SIZE];
+		u_char mac[EVP_MAX_MD_SIZE*2];
 		u_char* rec_mac = NULL;
-		
-		recLen -= EVP_MD_size( stack->md );
+		int l = EVP_MD_size( stack->md );
+		int ivl = EVP_CIPHER_iv_length( stack->cipher->cipher );
+
+		if ( EVP_CIPH_CBC_MODE == stack->sess->cipher_mode || EVP_CIPH_STREAM_CIPHER == stack->sess->cipher_mode )
+			recLen -= l;
 		rec_mac = data+recLen;
 
 		memset(mac, 0, sizeof(mac) );
-		rc = stack->sess->caclulate_mac_proc( stack, record_type, data, recLen, mac );
-
-		if( rc == DSSL_RC_OK )
+		
+		/* TLS 1.1 and later: remove explicit IV for non-stream ciphers */
+		if ( EVP_CIPH_CBC_MODE == stack->sess->cipher_mode )
 		{
-			rc = memcmp( mac, rec_mac, EVP_MD_size(stack->md) ) == 0 ? DSSL_RC_OK : NM_ERROR( DSSL_E_SSL_INVALID_MAC );
+			if (stack->sess->version >= TLS1_1_VERSION )
+			{
+				if (ivl <= recLen) {
+					recLen -= ivl;
+					data += ivl;
+				}
+			}
+		}
+
+		/* AEAD ciphers have no mac */
+		if ( EVP_CIPH_CBC_MODE == stack->sess->cipher_mode || EVP_CIPH_STREAM_CIPHER == stack->sess->cipher_mode )
+		{
+			rc = stack->sess->caclulate_mac_proc( stack, record_type, data, recLen, mac );
+
+			if( rc == DSSL_RC_OK )
+			{
+				rc = memcmp( mac, rec_mac, l ) == 0 ? DSSL_RC_OK : NM_ERROR( DSSL_E_SSL_INVALID_MAC );
+			}
 		}
 	}
 
@@ -251,6 +313,8 @@ int ssl3_record_layer_decoder( void* decoder_stack, NM_PacketDir dir,
 	{
 		rc = ssl_decompress_record( stack, data, recLen, &data, &recLen, &decompress_buffer_aquired );
 	}
+	
+	DEBUG_TRACE_BUF("decompressed", data, recLen);
 
 	if( rc == DSSL_RC_OK )
 	{

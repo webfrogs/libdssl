@@ -22,6 +22,7 @@
 #include "decoder_stack.h"
 #include "ssl_session.h"
 #include "ssl_utils.h"
+#include "ciphersuites.h"
 
 
 static void fmt_seq( uint64_t n, u_char* buf )
@@ -192,6 +193,8 @@ int tls1_calculate_mac( dssl_decoder_stack* stack, u_char type,
 	HMAC_Update( &hmac, data, len );
 	HMAC_Final( &hmac, mac, &mac_size );
 	HMAC_CTX_cleanup( &hmac );
+	
+	DEBUG_TRACE_BUF("mac", mac, mac_size);
 
 	return DSSL_RC_OK;
 }
@@ -223,23 +226,41 @@ int tls1_decode_finished( DSSL_Session* sess, NM_PacketDir dir, u_char* data, ui
 	_ASSERT( sess->version >= TLS1_VERSION );
 	if( len != 12 ) return NM_ERROR( DSSL_E_SSL_INVALID_RECORD_LENGTH );
 
-	label = (dir == ePacketDirFromClient) ? "client finished" : "server finished";
+	label = (dir == ePacketDirFromClient) ? TLS_MD_CLIENT_FINISH_CONST : TLS_MD_SERVER_FINISH_CONST;
 	
 	EVP_MD_CTX_init( &digest );
 
-	EVP_MD_CTX_copy_ex(&digest, &sess->handshake_digest_md5 );
+	if ( sess->version >= TLS1_2_VERSION )
+	{
+		EVP_MD_CTX_copy_ex(&digest, &sess->handshake_digest );
 
-	cur_ptr = buf;
-	EVP_DigestFinal_ex( &digest, cur_ptr, &sz );
-	cur_ptr += sz;
+		cur_ptr = buf;
+		EVP_DigestFinal_ex( &digest, cur_ptr, &sz );
+		cur_ptr += sz;
+	}
+	else
+	{
+		EVP_MD_CTX_copy_ex(&digest, &sess->handshake_digest_md5 );
 
-	EVP_MD_CTX_copy_ex(&digest, &sess->handshake_digest_sha );
-	EVP_DigestFinal_ex( &digest, cur_ptr, &sz );
-	cur_ptr += sz;
+		cur_ptr = buf;
+		EVP_DigestFinal_ex( &digest, cur_ptr, &sz );
+		cur_ptr += sz;
+
+		EVP_MD_CTX_copy_ex(&digest, &sess->handshake_digest_sha );
+		EVP_DigestFinal_ex( &digest, cur_ptr, &sz );
+		cur_ptr += sz;
+	}
 
 	EVP_MD_CTX_cleanup( &digest );
 
-	rc = tls1_PRF( sess->master_secret, sizeof( sess->master_secret ),
+	if ( sess->version == TLS1_2_VERSION )
+		rc = tls12_PRF( EVP_get_digestbyname( sess->dssl_cipher_suite->digest ), sess->master_secret, sizeof( sess->master_secret ),
+			label, 
+			buf, (uint32_t)(cur_ptr - buf),
+			NULL, 0, 
+			prf_out, sizeof( prf_out) );
+	else
+		rc = tls1_PRF( sess->master_secret, sizeof( sess->master_secret ),
 			label, 
 			buf, (uint32_t)(cur_ptr - buf),
 			NULL, 0, 

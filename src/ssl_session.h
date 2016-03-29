@@ -28,6 +28,13 @@
 extern "C" {
 #endif
 
+struct DSSL_handshake_buffer_
+{
+	DSSL_handshake_buffer*	next;
+	
+	u_char*					data;
+	uint32_t				len;
+};
 
 /* session flags */
 /* SSF_CLIENT_SESSION_ID_SET means that ClientHello message contained non-null session id field */
@@ -73,6 +80,7 @@ struct DSSL_Session_
 
 	EVP_MD_CTX			handshake_digest_sha;
 	EVP_MD_CTX			handshake_digest_md5;
+	EVP_MD_CTX			handshake_digest;
 
 	int (*decode_finished_proc)( struct DSSL_Session_* sess, NM_PacketDir dir, u_char* data, uint32_t len );
 	int (*caclulate_mac_proc)( dssl_decoder_stack* stack, u_char type, u_char* data, 
@@ -97,6 +105,11 @@ struct DSSL_Session_
 
 	u_char*				session_ticket; /* TLS session ticket */
 	uint32_t			session_ticket_len; /* TLS session ticket length */
+	
+	DSSL_CipherSuite*	dssl_cipher_suite;
+	int					cipher_mode;
+	
+	DSSL_handshake_buffer* handshake_queue;
 };
 
 

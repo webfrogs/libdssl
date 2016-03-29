@@ -25,6 +25,7 @@
 #include "ssl2_decode_hs.h"
 #include "decoder_stack.h"
 #include "packet.h"
+#include "ciphersuites.h"
 
 #ifndef SSL3_MT_NEWSESSION_TICKET
 	#define	SSL3_MT_NEWSESSION_TICKET		4
@@ -38,13 +39,14 @@ static const char* SSL3_HandshakeTypeToString( int hs_type )
 		case SSL3_MT_CLIENT_HELLO: return "ClientHello";
 		case SSL3_MT_SERVER_HELLO: return "ServerHello";
 		case SSL3_MT_NEWSESSION_TICKET: return "NewSessionTicket (unsupported!)";
-		case SSL3_MT_CERTIFICATE: return "Sertificate";
+		case SSL3_MT_CERTIFICATE: return "Certificate";
 		case SSL3_MT_SERVER_KEY_EXCHANGE: return "ServerKeyExchange";
 		case SSL3_MT_CERTIFICATE_REQUEST: return "CertificateRequest";
 		case SSL3_MT_SERVER_DONE: return "ServerHelloDone";
 		case SSL3_MT_CERTIFICATE_VERIFY: return "CertificateVerify";
 		case SSL3_MT_CLIENT_KEY_EXCHANGE: return "ClientKeyExchange";
 		case SSL3_MT_FINISHED: return "Finished";
+		case SSL3_MT_CERTIFICATE_STATUS: return "CertificateStatus";
 		case DTLS1_MT_HELLO_VERIFY_REQUEST: return "HelloVerifyRequest";
 		default: return "Unknown";
 	}
@@ -74,7 +76,7 @@ static int ssl3_decode_client_hello( DSSL_Session* sess, u_char* data, uint32_t 
 	/* record the handshake start time */
 	sess->handshake_start = sess->last_packet->pcap_header.ts;
 
-	if( data[0] != 3 || data[1] > 1) return NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
+	if( data[0] != 3 || data[1] > 3) return NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
 
 	/* 2 bytes client version */
 	sess->client_version = MAKE_UINT16( data[0], data[1] );
@@ -88,6 +90,7 @@ static int ssl3_decode_client_hello( DSSL_Session* sess, u_char* data, uint32_t 
 	/* 32 bytes ClientRandom */
 	memcpy( sess->client_random, data, 32 );
 	data+= 32;
+	DEBUG_TRACE_BUF("client_random", sess->client_random, 32);
 
 	/* check session ID length */
 	if( data[0] > 32 ) return NM_ERROR( DSSL_E_SSL_PROTOCOL_ERROR );
@@ -173,7 +176,7 @@ static int ssl3_decode_server_hello( DSSL_Session* sess, u_char* data, uint32_t 
 	uint16_t session_id_len = 0;
 	int session_id_match = 0;
 
-	if( data[0] != 3 || data[1] > 1) return NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
+	if( data[0] != 3 || data[1] > 3) return NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
 	if( len < SSL3_SERVER_HELLO_MIN_LEN ) return NM_ERROR( DSSL_E_SSL_INVALID_RECORD_LENGTH );
 
 	/* Server Version */
@@ -189,6 +192,7 @@ static int ssl3_decode_server_hello( DSSL_Session* sess, u_char* data, uint32_t 
 
 	memcpy( sess->server_random, data, sizeof( sess->server_random ) );
 	data+= 32;
+	DEBUG_TRACE_BUF("server_random", sess->server_random, 32);
 
 
 	/* session ID */
@@ -300,7 +304,7 @@ int ssl_decode_first_client_hello( DSSL_Session* sess, u_char* data, uint32_t le
 
 		if( rc == DSSL_RC_OK )
 		{
-			if( sess->version >= SSL3_VERSION && sess->version <= TLS1_VERSION )
+			if( sess->version >= SSL3_VERSION && sess->version <= TLS1_2_VERSION )
 			{
 				ssl3_init_handshake_digests( sess );
 				ssl3_update_handshake_digests( sess, data + hdrLen, recLen );
@@ -357,11 +361,11 @@ int ssl_detect_client_hello_version( u_char* data, uint32_t len, uint16_t* ver )
 		uint16_t client_hello_ver = MAKE_UINT16( data[9], data[10] );
 		*ver = MAKE_UINT16( data[1], data[2] );
 
-		if( *ver != client_hello_ver ) rc = DSSL_E_SSL_PROTOCOL_ERROR;
+		if( *ver > client_hello_ver ) rc = NM_ERROR( DSSL_E_SSL_PROTOCOL_ERROR );
 	}
 	else
 	{
-		rc = DSSL_E_SSL_UNKNOWN_VERSION;
+		rc = NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
 	}
 
 	return rc;
@@ -385,7 +389,7 @@ int ssl_detect_server_hello_version( u_char* data, uint32_t len, uint16_t* ver )
 		uint16_t sever_hello_ver = MAKE_UINT16( data[9], data[10] );
 		*ver = MAKE_UINT16( data[1], data[2] );
 
-		if( *ver != sever_hello_ver ) rc = NM_ERROR( DSSL_E_SSL_PROTOCOL_ERROR );
+		if( *ver > sever_hello_ver ) rc = NM_ERROR( DSSL_E_SSL_PROTOCOL_ERROR );
 	}
 	else if( data[0] == SSL3_RT_ALERT && len == 7 && data[1] == SSL3_VERSION_MAJOR &&
 			MAKE_UINT16( data[3], data[4] ) == 2 )
@@ -411,7 +415,7 @@ int ssl3_decode_client_key_exchange( DSSL_Session* sess, u_char* data, uint32_t 
 	int pms_len = 0;
 	int rc = DSSL_RC_OK;
 
-	if( sess->version < SSL3_VERSION || sess->version > TLS1_VERSION )
+	if( sess->version < SSL3_VERSION || sess->version > TLS1_2_VERSION )
 	{
 		return NM_ERROR( DSSL_E_SSL_UNKNOWN_VERSION );
 	}
@@ -569,11 +573,27 @@ void ssl3_init_handshake_digests( DSSL_Session* sess )
 {
 	EVP_DigestInit_ex( &sess->handshake_digest_md5, EVP_md5(), NULL );
 	EVP_DigestInit_ex( &sess->handshake_digest_sha, EVP_sha1(), NULL );
-}
 
+	if ( sess->version >= TLS1_2_VERSION )
+	{
+		EVP_MD* digest = NULL;
+		DSSL_CipherSuite* suite = sess->dssl_cipher_suite;
+		if ( !suite )
+			suite = DSSL_GetSSL3CipherSuite( sess->cipher_suite );
+		digest = EVP_get_digestbyname( suite->digest );
+		/* 'sha256' is the default for TLS 1.2 */
+		if ( !digest )
+			digest = EVP_sha256();
+
+		if ( digest )
+			EVP_DigestInit_ex( &sess->handshake_digest, digest, NULL );
+	}
+}
 
 void ssl3_update_handshake_digests( DSSL_Session* sess, u_char* data, uint32_t len )
 {
+	DSSL_handshake_buffer *q = NULL, *next;
+
 	/* sanity check in case client hello is not received */
 	if( sess->handshake_digest_md5.digest == NULL
 		|| sess->handshake_digest_sha.digest == NULL)
@@ -582,6 +602,68 @@ void ssl3_update_handshake_digests( DSSL_Session* sess, u_char* data, uint32_t l
 	}
 	EVP_DigestUpdate( &sess->handshake_digest_md5, data, len );
 	EVP_DigestUpdate( &sess->handshake_digest_sha, data, len );
+	
+	if ( sess->version >= TLS1_2_VERSION )
+	{
+		/* if digest is still unknown, then queue the packets.
+		 * we'll calculate the handshake hash once we determine which digest we should use.
+		 */
+		EVP_MD* digest = NULL;
+		DSSL_CipherSuite* suite = sess->dssl_cipher_suite;
+		if ( !suite )
+			suite = DSSL_GetSSL3CipherSuite( sess->cipher_suite );
+		digest = EVP_get_digestbyname( suite->digest );
+		/* 'sha256' is the default for TLS 1.2, and can be replaced with a different (but stronger) hash */
+		if ( !digest ) 
+		{
+			q = (DSSL_handshake_buffer*) malloc( sizeof(DSSL_handshake_buffer) );
+			q->next = NULL;
+			q->data = (u_char*) malloc( len );
+			memcpy(q->data, data, len);
+			q->len = len;
+			
+			if (NULL == sess->handshake_queue)
+				sess->handshake_queue = q;
+			else
+				sess->handshake_queue->next = q;
+			
+			DEBUG_TRACE3( "Queue handshake packet %p (%u @ %p)", q, q->len, q->data );
+		}
+		else if ( digest != sess->handshake_digest.digest && EVP_MD_size( digest ) >= EVP_MD_size( sess->handshake_digest.digest ) ) 
+		{
+			/* specified digest is different than the default.
+			 * re-init and re-hash all queued packets.
+			 */
+			EVP_MD_CTX_cleanup( &sess->handshake_digest );
+			EVP_DigestInit_ex( &sess->handshake_digest, digest, NULL );
+			for (q = sess->handshake_queue; q != NULL; q = next)
+			{
+				DEBUG_TRACE3( "Re-hash handshake packet %p (%u @ %p)", q, q->len, q->data );
+				EVP_DigestUpdate( &sess->handshake_digest, q->data, q->len );
+				next = q->next;
+				free ( q->data );
+				free ( q );
+			}
+			sess->handshake_queue = NULL;
+		}
+		else 
+		{
+			/* specified digest is identical to the default.
+			 * throw away all the queued packets.
+			 */
+			for (q = sess->handshake_queue; q != NULL; q = next)
+			{
+				DEBUG_TRACE3( "discard handshake packet %p (%u @ %p)", q, q->len, q->data );
+				next = q->next;
+				free ( q->data );
+				free ( q );
+			}
+			sess->handshake_queue = NULL;
+		}
+		
+		if ( sess->handshake_digest.digest )
+			EVP_DigestUpdate( &sess->handshake_digest, data, len );
+	}
 }
 
 
@@ -604,6 +686,7 @@ int ssl3_decode_handshake_record( dssl_decoder_stack* stack, NM_PacketDir dir,
 
 	if( len < SSL3_HANDSHAKE_HEADER_LEN ) return NM_ERROR( DSSL_E_SSL_INVALID_RECORD_LENGTH );
 
+	DEBUG_TRACE_BUF("handshake", data, len);
 	recLen = (((int32_t)data[1]) << 16) | (((int32_t)data[2]) << 8) | data[3];
 	hs_type = data[0];
 
@@ -657,7 +740,11 @@ int ssl3_decode_handshake_record( dssl_decoder_stack* stack, NM_PacketDir dir,
 			ssls_handshake_done( sess );
 		}
 		break;
-
+		
+	case SSL3_MT_CERTIFICATE_STATUS:
+		rc = ssl3_decode_dummy( sess, data, recLen );
+		break;
+	
 	case SSL3_MT_SERVER_KEY_EXCHANGE:
 		/*at this point it is clear that the session is not decryptable due to ephemeral keys usage.*/
 		rc = NM_ERROR( DSSL_E_SSL_CANNOT_DECRYPT_EPHEMERAL );

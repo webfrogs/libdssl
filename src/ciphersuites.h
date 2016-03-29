@@ -41,12 +41,14 @@ struct _DSSL_CipherSuite
 	uint16_t				id;
 	uint16_t				ssl_version;
 
-	uint16_t				key_ex;
+	const char*				key_ex;
 
 	int						export_key_bits;
 
 	const char*				enc;
 	const char*				digest;
+	
+	void*					extra_info;
 };
 
 DSSL_CipherSuite* DSSL_GetSSL3CipherSuite( uint16_t id );

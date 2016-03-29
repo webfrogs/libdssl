@@ -48,6 +48,7 @@ void DSSL_SessionInit( DSSL_Env* env, DSSL_Session* s, DSSL_ServerInfo* si )
 
 	EVP_MD_CTX_init( &s->handshake_digest_md5 );
 	EVP_MD_CTX_init( &s->handshake_digest_sha );
+	EVP_MD_CTX_init( &s->handshake_digest );
 }
 
 
@@ -66,6 +67,7 @@ void DSSL_SessionDeInit( DSSL_Session* s )
 
 	EVP_MD_CTX_cleanup( &s->handshake_digest_md5 );
 	EVP_MD_CTX_cleanup( &s->handshake_digest_sha );
+	EVP_MD_CTX_cleanup( &s->handshake_digest );
 }
 
 
@@ -185,6 +187,8 @@ int ssls_set_session_version( DSSL_Session* sess, uint16_t ver )
 			ssls_convert_v2challenge(sess);
 		break;
 
+	case TLS1_1_VERSION:
+	case TLS1_2_VERSION:
 	case TLS1_VERSION:
 		sess->decode_finished_proc = tls1_decode_finished;
 		sess->caclulate_mac_proc = tls1_calculate_mac;
@@ -209,6 +213,8 @@ int ssls_set_session_version( DSSL_Session* sess, uint16_t ver )
 
 int ssls_decode_master_secret( DSSL_Session* sess )
 {
+	DSSL_CipherSuite* suite = NULL;
+
 	switch( sess->version )
 	{
 	case SSL3_VERSION:
@@ -217,9 +223,20 @@ int ssls_decode_master_secret( DSSL_Session* sess )
 					sess->server_random, SSL3_RANDOM_SIZE,
 					sess->master_secret, sizeof( sess->master_secret ) );
 
+	case TLS1_1_VERSION:
 	case TLS1_VERSION:
 		return tls1_PRF( sess->PMS, SSL_MAX_MASTER_KEY_LENGTH, 
-					"master secret", 
+					TLS_MD_MASTER_SECRET_CONST, 
+					sess->client_random, SSL3_RANDOM_SIZE, 
+					sess->server_random, SSL3_RANDOM_SIZE,
+					sess->master_secret, sizeof( sess->master_secret ) );
+	case TLS1_2_VERSION:
+		suite = sess->dssl_cipher_suite;
+		if ( !suite )
+			suite = DSSL_GetSSL3CipherSuite( sess->cipher_suite );
+		if( !suite ) return NM_ERROR( DSSL_E_SSL_CANNOT_DECRYPT );
+		return tls12_PRF( EVP_get_digestbyname( suite->digest ), sess->PMS, SSL_MAX_MASTER_KEY_LENGTH, 
+					TLS_MD_MASTER_SECRET_CONST, 
 					sess->client_random, SSL3_RANDOM_SIZE, 
 					sess->server_random, SSL3_RANDOM_SIZE,
 					sess->master_secret, sizeof( sess->master_secret ) );
@@ -241,7 +258,7 @@ static void ssl3_generate_export_iv( u_char* random1, u_char* random2, u_char* o
 }
 
 /* generate read/write keys for SSL v3+ session */
-#define TLS_MAX_KEYBLOCK_LEN ((EVP_MAX_KEY_LENGTH + EVP_MAX_IV_LENGTH + EVP_MAX_MD_SIZE)*2)
+#define TLS_MAX_KEYBLOCK_LEN ((EVP_MAX_KEY_LENGTH + EVP_MAX_IV_LENGTH + EVP_MAX_MD_SIZE*2)*2)
 int ssls_generate_keys( DSSL_Session* sess )
 {
 	DSSL_CipherSuite* suite = NULL;
@@ -255,6 +272,8 @@ int ssls_generate_keys( DSSL_Session* sess )
 	u_char* s_iv = NULL;
 	u_char export_iv_block[EVP_MAX_IV_LENGTH*2];
 
+	u_char c_iv_buf[EVP_MAX_IV_LENGTH];
+	u_char s_iv_buf[EVP_MAX_IV_LENGTH];
 	u_char export_c_wk[EVP_MAX_KEY_LENGTH];
 	u_char export_s_wk[EVP_MAX_KEY_LENGTH];
 	
@@ -274,6 +293,9 @@ int ssls_generate_keys( DSSL_Session* sess )
 	_ASSERT( sess->s_dec.compression_data_new == NULL );
 	_ASSERT( sess->c_dec.compression_method_new == 0 );
 	_ASSERT( sess->s_dec.compression_method_new == 0 );
+
+	memset(c_iv_buf, 0, sizeof(c_iv_buf));
+	memset(s_iv_buf, 0, sizeof(s_iv_buf));
 
 	/* set new compression algorithm */
 	if( sess->compression_method != 0 )
@@ -302,31 +324,48 @@ int ssls_generate_keys( DSSL_Session* sess )
 	}
 
 	suite = DSSL_GetSSL3CipherSuite( sess->cipher_suite );
+
 	if( !suite ) return NM_ERROR( DSSL_E_SSL_CANNOT_DECRYPT );
 
+	sess->dssl_cipher_suite = suite;
 	c = EVP_get_cipherbyname( suite->enc );
 	digest = EVP_get_digestbyname( suite->digest );
 
 	/* calculate key length and IV length */
 	if( c != NULL ) 
 	{
+		sess->cipher_mode = EVP_CIPHER_mode(c);
 		if( DSSL_CipherSuiteExportable( suite ) )
 		{ wk_len = suite->export_key_bits / 8; }
 		else 
 		{ wk_len = EVP_CIPHER_key_length( c ); }
 
 		iv_len = EVP_CIPHER_iv_length( c );
+		/* GCM ciphers' IV is constructed from 4-byte salt and 8-byte nonce_explicit */
+		if ( EVP_CIPH_GCM_MODE == sess->cipher_mode )
+			iv_len = EVP_GCM_TLS_FIXED_IV_LEN;
+		
+		DEBUG_TRACE3( "\ncipher '%s' has %sIV length %u\n", suite->enc, ((EVP_CIPH_GCM_MODE == sess->cipher_mode)?"fixed ":""), iv_len);
 	}
 	if( digest != NULL ) digest_len = EVP_MD_size( digest );
 
 	/* calculate total keyblock length */
 	keyblock_len = (wk_len + digest_len + iv_len)*2;
+	DEBUG_TRACE4( "\nkey material = (%u+%u+%u)*2 = %u\n", wk_len, digest_len, iv_len, keyblock_len);
 	if( !keyblock_len ) return DSSL_RC_OK;
 
-	if( sess->version == TLS1_VERSION )
+	if( sess->version >= TLS1_2_VERSION)
+	{
+		rc = tls12_PRF( digest, sess->master_secret, sizeof( sess->master_secret ), 
+					TLS_MD_KEY_EXPANSION_CONST, 
+					sess->server_random, SSL3_RANDOM_SIZE,
+					sess->client_random, SSL3_RANDOM_SIZE,
+					keyblock, keyblock_len );
+	}
+	else if( sess->version >= TLS1_VERSION)
 	{
 		rc = tls1_PRF( sess->master_secret, sizeof( sess->master_secret ), 
-					"key expansion", 
+					TLS_MD_KEY_EXPANSION_CONST, 
 					sess->server_random, SSL3_RANDOM_SIZE,
 					sess->client_random, SSL3_RANDOM_SIZE,
 					keyblock, keyblock_len );
@@ -344,7 +383,8 @@ int ssls_generate_keys( DSSL_Session* sess )
 	{
 		u_char* p = keyblock;
 
-		if( digest_len )
+		/* AEAD ciphers don't use MAC */
+		if( digest_len && !(EVP_CIPH_GCM_MODE == sess->cipher_mode || EVP_CIPH_CCM_MODE == sess->cipher_mode ) )
 		{
 			c_mac = p; p+= digest_len;
 			s_mac = p; p+= digest_len;
@@ -356,17 +396,17 @@ int ssls_generate_keys( DSSL_Session* sess )
 			s_wk = p; p+= wk_len;
 
 			/* generate final server and client write keys for exportable ciphers */
-			if( DSSL_CipherSuiteExportable( suite ) )
+			if( DSSL_CipherSuiteExportable( suite ) && ( sess->version < TLS1_2_VERSION) )
 			{
 				int final_wk_len =  EVP_CIPHER_key_length( c );
-				if( sess->version == TLS1_VERSION )
+				if( sess->version >= TLS1_VERSION)
 				{
-					tls1_PRF( c_wk, wk_len, "client write key", 
+					tls1_PRF( c_wk, wk_len, TLS_MD_CLIENT_WRITE_KEY_CONST, 
 							sess->client_random, SSL3_RANDOM_SIZE,
 							sess->server_random, SSL3_RANDOM_SIZE,
 							export_c_wk, final_wk_len );
 					
-					tls1_PRF( s_wk, wk_len, "server write key", 
+					tls1_PRF( s_wk, wk_len, TLS_MD_SERVER_WRITE_KEY_CONST, 
 							sess->client_random, SSL3_RANDOM_SIZE,
 							sess->server_random, SSL3_RANDOM_SIZE,
 							export_s_wk, final_wk_len );
@@ -397,11 +437,11 @@ int ssls_generate_keys( DSSL_Session* sess )
 		
 		if( iv_len )
 		{
-			if( DSSL_CipherSuiteExportable( suite ) )
+			if( DSSL_CipherSuiteExportable( suite ) && ( sess->version < TLS1_2_VERSION) )
 			{
-				if( sess->version == TLS1_VERSION )
+				if( sess->version >= TLS1_VERSION)
 				{
-					tls1_PRF( NULL, 0, "IV block",
+					tls1_PRF( NULL, 0, TLS_MD_IV_BLOCK_CONST,
 							sess->client_random, SSL3_RANDOM_SIZE, 
 							sess->server_random, SSL3_RANDOM_SIZE,
 							export_iv_block, iv_len*2 );
@@ -427,14 +467,22 @@ int ssls_generate_keys( DSSL_Session* sess )
 			}
 			else
 			{
-				c_iv = p; p+= iv_len;
-				s_iv = p; p+= iv_len;
+				c_iv = memcpy(c_iv_buf, p, iv_len); p+= iv_len;
+				s_iv = memcpy(s_iv_buf, p, iv_len); p+= iv_len;
 			}
 		}
 		else
 		{
 			c_iv = s_iv = NULL;
 		}
+		
+		DEBUG_TRACE_BUF("keyblock", keyblock, keyblock_len);
+		DEBUG_TRACE_BUF("c_mac", c_mac, digest_len);
+		DEBUG_TRACE_BUF("s_mac", s_mac, digest_len);
+		DEBUG_TRACE_BUF("c_wk", c_wk, wk_len);
+		DEBUG_TRACE_BUF("s_wk", s_wk, wk_len);
+		DEBUG_TRACE_BUF("c_iv", c_iv, iv_len);
+		DEBUG_TRACE_BUF("s_iv", s_iv, iv_len);
 	}
 
 	/* create ciphers */
@@ -454,9 +502,11 @@ int ssls_generate_keys( DSSL_Session* sess )
 	{
 		EVP_CIPHER_CTX_init( c_cipher );
 		EVP_CipherInit( c_cipher, c, c_wk, c_iv, 0 );
+		EVP_CIPHER_CTX_ctrl(c_cipher, EVP_CTRL_GCM_SET_IV_FIXED, -1, c_iv);
 
 		EVP_CIPHER_CTX_init( s_cipher );
 		EVP_CipherInit( s_cipher, c, s_wk, s_iv, 0 );
+		EVP_CIPHER_CTX_ctrl(s_cipher, EVP_CTRL_GCM_SET_IV_FIXED, -1, s_iv);
 	}
 
 	/* set session data */
@@ -473,8 +523,10 @@ int ssls_generate_keys( DSSL_Session* sess )
 			_ASSERT( EVP_MD_size( digest ) == (int)digest_len );
 			sess->c_dec.md_new = digest;
 			sess->s_dec.md_new = digest;
-			memcpy( sess->c_dec.mac_key_new, c_mac, digest_len );
-			memcpy( sess->s_dec.mac_key_new, s_mac, digest_len );
+			if (c_mac)
+				memcpy( sess->c_dec.mac_key_new, c_mac, digest_len );
+			if (s_mac)
+				memcpy( sess->s_dec.mac_key_new, s_mac, digest_len );
 		}
 	}
 
