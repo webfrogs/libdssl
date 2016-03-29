@@ -26,6 +26,12 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 void pcap_cb_sll( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
 void pcap_cb_null( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data );
 
+#if defined(__sparc__) ||  defined(__sparc) || defined(__SunOS_5_8) || defined(__SunOS_5_9) || defined(__SunOS_5_10) || defined(__hpux) || ( defined(__GNUC__) && defined(__sun__) )
+  #define NEED_ALIGNMENT
+  #define PKT_DATA_LEN 2048
+  u_char pkt_data_buf[PKT_DATA_LEN];
+#endif
+
 #ifndef DSSL_NO_PCAP
 pcap_handler GetPcapHandler( pcap_t* p )
 {
@@ -159,7 +165,7 @@ void pcap_cb_null( u_char *ptr, const struct pcap_pkthdr *header, const u_char *
 #define ETHERTYPE_VLAN 0x8100
 #endif
 
-void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_char *pkt_data )
+void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_char *packet_data )
 {
 	CapEnv* env = (CapEnv*)ptr;
 	DSSL_Pkt packet;
@@ -167,7 +173,36 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 	int m_link_protocol_offset = 12;
 	int m_link_len = ETHER_HDRLEN;
 	int pkt_link_len = m_link_len;
+	u_char *pkt_data = packet_data;
+#ifdef NEED_ALIGNMENT
+        u_char * _pkt_data = NULL;
+	int n = 0;
 
+        if (len > ETHER_HDRLEN) {
+		n = 4 - ETHER_HDRLEN%4;
+		if (n < 4) {
+			if((size_t)len + n > PKT_DATA_LEN) {
+				_pkt_data = (u_char *)malloc((size_t)len + n);
+				if(!_pkt_data) {
+					nmLogMessage( ERR_CAPTURE, "pcap_cb_ethernet: malloc failed!" );
+					return;
+				}
+				memcpy(_pkt_data, pkt_data, ETHER_HDRLEN);
+				memcpy(_pkt_data + ETHER_HDRLEN + n, pkt_data + ETHER_HDRLEN, len - ETHER_HDRLEN);
+				pkt_data = _pkt_data;
+			}
+			else {
+				memcpy(pkt_data_buf, pkt_data, ETHER_HDRLEN);
+				memcpy(pkt_data_buf + ETHER_HDRLEN + n, pkt_data + ETHER_HDRLEN, len - ETHER_HDRLEN);
+				pkt_data = pkt_data_buf;
+			}
+			pkt_link_len +=n;
+			len +=n;
+		}
+		else
+			n = 0;
+	}
+#endif
 #ifdef NM_TRACE_FRAME_COUNT
 	DEBUG_TRACE1("\n-=ETH-FRAME: %u", env->frame_cnt);
 	++env->frame_cnt;
@@ -175,6 +210,10 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 
 	memset( &packet, 0, sizeof( packet ) );
 	memcpy( &packet.pcap_header, header, sizeof(packet.pcap_header) );
+#ifdef NEED_ALIGNMENT
+        packet.pcap_header.caplen += n;
+        packet.pcap_header.len += n;
+#endif
 
 	packet.pcap_ptr = pkt_data;
 	packet.link_type = pcap_datalink(env->pcap_adapter);
@@ -184,6 +223,10 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 	if( len < ETHER_HDRLEN )
 	{
 		nmLogMessage( ERR_CAPTURE, "pcap_cb_ethernet: Invalid ethernet header length!" );
+#ifdef NEED_ALIGNMENT
+		if(_pkt_data)
+			free(_pkt_data);
+#endif
 		return;
 	}
 
@@ -193,8 +236,18 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 		{
 			// adjust for vlan (801.1q) packet headers
 			pkt_link_len += 4;
+#ifdef NEED_ALIGNMENT
+	    pkt_data[ETHER_HDRLEN] =     pkt_data[ETHER_HDRLEN + n];
+	    pkt_data[ETHER_HDRLEN + 1] = pkt_data[ETHER_HDRLEN + n + 1];
+	    pkt_data[ETHER_HDRLEN + 2] = pkt_data[ETHER_HDRLEN + n + 2];
+	    pkt_data[ETHER_HDRLEN + 3] = pkt_data[ETHER_HDRLEN + n + 3];
+#endif
 		} else {
 			// not an ethernet packet or non-IP vlan packet
+#ifdef NEED_ALIGNMENT
+			if(_pkt_data)
+				free(_pkt_data);
+#endif
 			return;
 		}
 	}
@@ -202,4 +255,8 @@ void pcap_cb_ethernet( u_char *ptr, const struct pcap_pkthdr *header, const u_ch
 	{
 		DecodeIpPacket( env, &packet, pkt_data + pkt_link_len, len - ETHER_HDRLEN );
 	}
+	#ifdef NEED_ALIGNMENT
+		if(_pkt_data)
+			free(_pkt_data);
+	#endif
 }
