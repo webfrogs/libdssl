@@ -285,6 +285,11 @@ void SessionProcessPacket( CapEnv* env, DSSL_Pkt* pkt )
 	/* update session's last activity timestamp */
 	TouchSession( pkt->session );
 
+	/* call packet callback first */
+	if ( pkt->session->packet_callback ) {
+		pkt->session->packet_callback( pkt->session->user_data, pkt );
+	}
+
 	if( !SessionDecodable( pkt->session ) ) return;
 
 	stream = GetPacketStream( pkt );
@@ -317,12 +322,13 @@ void SessionProcessPacket( CapEnv* env, DSSL_Pkt* pkt )
 
 
 void SessionSetCallback( TcpSession* sess, DataCallbackProc data_callback, ErrorCallbackProc error_callback,
-						void* user_data )
+						PacketCallbackProc packet_callback, void* user_data )
 {
 	_ASSERT( sess );
 
 	sess->data_callback = data_callback;
 	sess->error_callback = error_callback;
+	sess->packet_callback = packet_callback;
 	sess->user_data = user_data;
 	
 	if( sess->ssl_session != NULL )

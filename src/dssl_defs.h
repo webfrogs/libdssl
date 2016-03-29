@@ -95,6 +95,7 @@ typedef struct dssl_decoder_stack_ dssl_decoder_stack;
 /* TCP or SSL decoder callback */
 typedef void (*DataCallbackProc)( NM_PacketDir dir, void* user_data, u_char* data, uint32_t len, DSSL_Pkt* pkt );
 typedef void (*ErrorCallbackProc)( void* user_data, int error_code );
+typedef void (*PacketCallbackProc)( void* user_data, DSSL_Pkt* pkt );
 
 /**
 MissingPacketCallbackProc routine:

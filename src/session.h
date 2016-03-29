@@ -59,6 +59,8 @@ struct _TcpSession
 	int							missing_packet_timeout; /**/
 	uint32_t					missing_packet_count;
 	MissingPacketCallbackProc	missing_callback;
+	/* packet callback */
+	PacketCallbackProc		packet_callback;
 };
 
 /* formats an ip:port parameters as a string into buff */
@@ -81,7 +83,7 @@ void TouchSession( TcpSession* s );
 
 /*Get/Set session callbacks, user data */
 void SessionSetCallback( TcpSession* sess, DataCallbackProc data_callback, 
-			ErrorCallbackProc error_callback, void* user_data );
+			ErrorCallbackProc error_callback, PacketCallbackProc packet_callback, void* user_data );
 
 void SessionSetMissingPacketCallback( TcpSession* sess, MissingPacketCallbackProc missing_callback,
 			int missing_packet_count, int timeout_sec );

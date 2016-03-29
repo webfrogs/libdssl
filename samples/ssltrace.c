@@ -165,7 +165,7 @@ static void session_event_handler( CapEnv* env, TcpSession* sess, char event )
 	case DSSL_EVENT_NEW_SESSION:
 		SessionToString(sess, buff);
 		printf( "\n=> New Session: %s", buff );
-		SessionSetCallback( sess, data_callback_proc, error_callback_proc, sess );
+		SessionSetCallback( sess, data_callback_proc, error_callback_proc, NULL, sess );
 		SessionSetMissingPacketCallback( sess, missing_packet_callback, MISSING_PACKET_COUNT, 
 			MISSING_PACKET_TIMEOUT );
 		break;
