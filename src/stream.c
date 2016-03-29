@@ -628,7 +628,7 @@ static int StreamEnqueue( TcpStream* stream, DSSL_Pkt* pkt )
 		while( p && !processed )
 		{
 			uint32_t seq_p = PKT_TCP_SEQ( p );
-			if( seq_p == seq )
+			if( seq_p <= seq && seq_p + p->data_len >= seq )
 			{
 				if( p->data_len != 0 )
 				{
