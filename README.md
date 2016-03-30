@@ -2,12 +2,10 @@
 
 [![Build Status](https://travis-ci.org/Correlsense/libdssl.svg?branch=master)](https://travis-ci.org/Correlsense/libdssl)
 
-Copyright (C) 2007-2009 Atomic Labs, Inc.
-
 To view the installation documentation, load docs/index.html into your browser.
 
 ----------------------------------------------
-This fork contains improvements to the original code,<br />
+This fork contains improvements to the original code (by Atomic Labs, Inc.),<br />
 some for our internal use (but may still be useful to others) and some will benefit the community
 
  * _multiplatform support_<br />
