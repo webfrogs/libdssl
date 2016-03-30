@@ -1,4 +1,4 @@
-k# DSSL library: network capture and SSL decryption toolkit
+# DSSL library: network capture and SSL decryption toolkit
 
 [![Build Status](https://travis-ci.org/Correlsense/libdssl.svg?branch=master)](https://travis-ci.org/Correlsense/libdssl)
 
@@ -20,6 +20,7 @@ some for our internal use (but may still be useful to others) and some will bene
    * HPUX parisc/ia64
 
  * _Support for TLS v1.2+_
+
 ----------------------------------------------
 
 ### www.correlsense.com
