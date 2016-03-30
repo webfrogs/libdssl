@@ -15,7 +15,8 @@ AC_PROG_LIBTOOL
 
 # Define CXXFLAGS before AC_PROG_CXX to suppress the default autoconf
 # compiler options
-CFLAGS="-DDSSL"
+# _SYS_MD5_H is required to avoid conflict between OpenSSL and sys/md5.h MD5_CTX
+CFLAGS="-DDSSL -D_SYS_MD5_H"
 
 # introduce the optional configure parameter for OpenSSL library location
 AC_ARG_WITH(openssl,
