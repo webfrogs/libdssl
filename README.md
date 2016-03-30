@@ -1,5 +1,7 @@
 # DSSL library: network capture and SSL decryption toolkit
 
+[![Build Status](https://travis-ci.org/Correlsense/libdssl.svg?branch=master)](https://travis-ci.org/Correlsense/libdssl)
+
 Copyright (C) 2007-2009 Atomic Labs, Inc.
 
 To view the installation documentation, load docs/index.html into your browser.
