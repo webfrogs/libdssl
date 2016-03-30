@@ -23,6 +23,4 @@ some for our internal use (but may still be useful to others) and some will bene
 
 ----------------------------------------------
 
-### www.correlsense.com
-
-![alt text](http://www.correlsense.com/newsite2/wp-content/uploads/logo-cs.png "Correlsense")
+[![Correlsense](http://www.correlsense.com/newsite2/wp-content/uploads/logo-cs.png)](http://www.correlsense.com)
