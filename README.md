@@ -5,6 +5,8 @@
 To view the installation documentation, load docs/index.html into your browser.
 
 ----------------------------------------------
+### Introduction
+
 This fork contains improvements to the original code (by Atomic Labs, Inc.),<br />
 some for our internal use (but may still be useful to others) and some will benefit the community
 
@@ -18,6 +20,17 @@ some for our internal use (but may still be useful to others) and some will bene
    * HPUX parisc/ia64
 
  * _Support for TLS v1.2+_
+
+----------------------------------------------
+### Requirements
+
+ * openssl
+ * libpcap
+
+----------------------------------------------
+### Notes
+
+* SSL decryption is not possible when DHE (Diffie-Hellman key Exchange, or epheral keys) is used
 
 ----------------------------------------------
 
