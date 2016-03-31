@@ -1,3 +1,12 @@
+2016-03-31:
+	* Added support for TLSv2+
+	* Added support for new hashing and encryption protocols (requires new openssl)
+	* Improve multiplatform support
+	* Add partial support for IPv6 packets - IPv4 mapped or LOCALHOST
+	* Add per-packet callback
+	* Add support for Linux-cooked (SLL) datalink
+	* Improve missing-packet logic
+	* Improve reassembly logic for corner cases (partial handshake, half closed, partial retransmit, ack deadlock)
 2011-04-14: version 2.1.1
 	* Improved reassembly logic for retransmitted/overlapping packets
 2011-04-04: version 2.0.4
