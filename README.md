@@ -22,7 +22,7 @@ some for our internal use (but may still be useful to others) and some will bene
  * _Support for TLS v1.2+_
 
 ----------------------------------------------
-### Requirements
+### Build and Runtime Prerequisites
 
  * openssl
  * libpcap
