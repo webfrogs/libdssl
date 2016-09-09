@@ -30,7 +30,7 @@ some for our internal use (but may still be useful to others) and some will bene
 ----------------------------------------------
 ### Notes
 
-* SSL decryption is not possible when DHE (Diffie-Hellman key Exchange, or epheral keys) is used
+* SSL decryption is not possible when DHE (Diffie-Hellman key Exchange, or ephemeral keys) is used
 
 ----------------------------------------------
 
