@@ -88,6 +88,21 @@ void DSSL_SessionSetEventCallback(DSSL_Session* sess, EventCallbackProc event_ca
 	sess->event_callback = event_callback;
 }
 
+int DSSL_SessionPrepareData(DSSL_Session* sess, struct timeval* ts,
+		uint32_t dip, uint16_t dport, void* priv, DSSL_Pkt* pkt)
+{
+	DSSL_Pkt* p;
+
+	p = pkt;
+	sess->last_packet = p;
+	sess->user_data = priv;
+	p->pcap_header.ts.tv_sec = ts->tv_sec;
+	p->pcap_header.ts.tv_usec = ts->tv_usec;
+	p->ip_header->ip_dst.s_addr = dip;
+	p->tcp_header->th_dport = dport;
+
+	return 0;
+}
 
 int DSSL_SessionProcessData( DSSL_Session* sess, NM_PacketDir dir, u_char* data, uint32_t len )
 {

@@ -121,6 +121,8 @@ void DSSL_SessionSetCallback( DSSL_Session* sess, DataCallbackProc data_callback
 
 void DSSL_SessionSetEventCallback(DSSL_Session* sess, EventCallbackProc proc);
 
+int DSSL_SessionPrepareData(DSSL_Session* sess, struct timeval* ts,
+	uint32_t dip, uint16_t dport, void* priv, DSSL_Pkt* pkt);
 /**
 	DSSL_SessionProcessData:  Decodes captured network SSL session data
 	dir - data (stream) direction

@@ -5,6 +5,14 @@
 To view the installation documentation, load docs/index.html into your browser.
 
 ----------------------------------------------
+### Words after fork
+
+Forked by Cao Tong <tony.caotong@gmail.com> @ Tartaglia at 2017-05-15 for reason that:
+
+1.  original libdssl has two frame work, one with session mangage, one not. more info refer to docs/index.html. but there is some bugs when I ony use the decrypt framework, it has dependence on the other framework. so I add a little function to let this dependence do not leak out of the lib.
+
+
+----------------------------------------------
 ### Introduction
 
 This fork contains improvements to the original code (by Atomic Labs, Inc.),<br />
