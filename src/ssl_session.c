@@ -226,7 +226,7 @@ int ssls_set_session_version( DSSL_Session* sess, uint16_t ver )
 }
 
 
-int ssls_decode_master_secret( DSSL_Session* sess )
+int ssls_decode_master_secret( DSSL_Session* sess, u_char* data, uint32_t len)
 {
 	DSSL_CipherSuite* suite = NULL;
 
@@ -250,11 +250,31 @@ int ssls_decode_master_secret( DSSL_Session* sess )
 		if ( !suite )
 			suite = DSSL_GetSSL3CipherSuite( sess->cipher_suite );
 		if( !suite ) return NM_ERROR( DSSL_E_SSL_CANNOT_DECRYPT );
-		return tls12_PRF( EVP_get_digestbyname( suite->digest ), sess->PMS, SSL_MAX_MASTER_KEY_LENGTH, 
-					TLS_MD_MASTER_SECRET_CONST, 
-					sess->client_random, SSL3_RANDOM_SIZE, 
-					sess->server_random, SSL3_RANDOM_SIZE,
+
+    EVP_MD_CTX md_ctx;
+    const EVP_MD *digest = EVP_get_digestbyname( suite->digest );
+    uint32_t md_size = EVP_MD_size(digest);
+
+    u_char* sessionHash = (u_char*) malloc( md_size );
+
+    EVP_MD_CTX_init( &md_ctx );
+    EVP_MD_CTX_copy_ex( &md_ctx, &sess->handshake_digest);
+    EVP_DigestUpdate(&md_ctx, data-SSL3_HANDSHAKE_HEADER_LEN, len+SSL3_HANDSHAKE_HEADER_LEN);
+    EVP_DigestFinal_ex( &md_ctx, sessionHash, &md_size);
+    EVP_MD_CTX_cleanup( &md_ctx );
+    DEBUG_TRACE_BUF("session hash", sessionHash, md_size);
+		int rc = tls12_PRF( EVP_get_digestbyname( suite->digest ), sess->PMS, SSL_MAX_MASTER_KEY_LENGTH, 
+					"extended master secret", 
+					sessionHash, md_size, 
+					NULL, 0,
 					sess->master_secret, sizeof( sess->master_secret ) );
+    free(sessionHash);
+    return rc;
+		/* return tls12_PRF( EVP_get_digestbyname( suite->digest ), sess->PMS, SSL_MAX_MASTER_KEY_LENGTH,  */
+		/* 			TLS_MD_MASTER_SECRET_CONST,  */
+		/* 			sess->client_random, SSL3_RANDOM_SIZE,  */
+		/* 			sess->server_random, SSL3_RANDOM_SIZE, */
+		/* 			sess->master_secret, sizeof( sess->master_secret ) ); */
 
 	default:
 		return NM_ERROR( DSSL_E_NOT_IMPL );

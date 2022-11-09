@@ -137,7 +137,7 @@ int DSSL_SessionProcessData( DSSL_Session* sess, NM_PacketDir dir, u_char* data,
 /* Internal routines */
 
 EVP_PKEY* ssls_get_session_private_key( DSSL_Session* sess );
-int ssls_decode_master_secret( DSSL_Session* sess );
+int ssls_decode_master_secret( DSSL_Session* sess , u_char* data, uint32_t len);
 int ssls_generate_keys( DSSL_Session* sess );
 int ssls2_generate_keys( DSSL_Session* sess, u_char* keyArg, uint32_t keyArgLen );
 int ssls_set_session_version( DSSL_Session* sess, uint16_t ver );

@@ -492,7 +492,7 @@ int ssl3_decode_client_key_exchange( DSSL_Session* sess, u_char* data, uint32_t 
 		return NM_ERROR( DSSL_E_SSL_PMS_VERSION_ROLLBACK );
 	}
 
-	rc = ssls_decode_master_secret( sess );
+	rc = ssls_decode_master_secret( sess ,org_data, org_len);
 	OPENSSL_cleanse(sess->PMS, sizeof(sess->PMS) );
 
 	if( rc != DSSL_RC_OK ) return rc;
